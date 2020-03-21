@@ -2,54 +2,79 @@ Java 基础
 1. JDK 和 JRE 有什么区别？
 
 JDK是Java Development Kit 的简称，即java开发工具包，提供了java相关的开发环境和运行环境。
-
 JRE是Java Runtime Environment的简称，即Java运行环境，提供Java运行所需要的环境。
 
 实际上，JDK已经包含了JRE，还包含了编译Java源码的编译器 javac 和其他的Java程序调试和分析工具。
-
 如果只是运行Java程序，安装JRE就够了，如果要开发Java程序，则需要安装JDK。
-
 
 
 2.== 和 equals 的区别是什么？
 
 ==，比较的是基本类型的值，引用类型的地址；
-
-equals，本质上是==，但是一般很多重写了equals方法，如String、Integer重写成了值比较，所以 equals 比较变成是值是否相等。
+equals，本质上是==，但是一般很多重写了equals方法，如String、Integer重写成了值比较，所以 equals 比较变成是值是否相等。
 
 代码比较：
+	String s1 = new String("老王"); 
+	String s2 = new String("老王");
+	System.out.println(s1.equals(s2)); // true
+	Cat c1 = new Cat("王磊");
+	Cat c2 = new Cat("王磊"); 
+	System.out.println(c1.equals(c2)); // fals
+ String （和Integer）重写了 Object 的 equals 方法，把引用比较改成了值比较。（Cat没有重写）	一般（不重写）是比较 引用（地址）
 
-String s1 = new String("老王"); String s2 = new String("老王"); System.out.println(s1.equals(s2)); // true
-Cat c1 = new Cat("王磊"); Cat c2 = new Cat("王磊"); System.out.println(c1.equals(c2)); // fals
- String （和Integer）重写了 Object 的 equals 方法，把引用比较改成了值比较。	一般（不重写）是比较 引用（地址）
+这里注意：如果Cat类是以下原始结构，则符合 c1.equals(c2) 为 fals，其hashCode也不同；
+如果使用 @Data 的方式替换get和set方法，则输出为true，hashCode也相同，因为是@Data注解重写了equal和hashCode方法。
+【https://projectlombok.org/features/Data】
+
+class Cat {
+    public Cat(String name) {
+        this.name = name;
+    }
+
+    private String name;
+ 
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+}
 
 
 3.两个对象的 hashCode()相同，则 equals()也一定为 true，对吗？
 
-不一定，hashCode相同，equals比一定为true。【不然就不会出现哈希冲突问题了】
+不一定，hashCode相同，equals不一定为true。
+【不然就不会出现哈希冲突问题了（即不同对象也可能存在相同hashCode）；
+  如上面的Cat对象，都是“王磊”，hashCode可能相同，但是不同对象，equal比较的引用地址不一样】
 
-代码解读：很显然“通话”和“重地”的 hashCode() 相同，然而 equals() 则为 false，因为在散列表中，hashCode() 相等即两个键值对的哈希值相等，然而哈希值相等，并不一定能得出键值对相等。
-
-
+代码解读：像 “通话” 和 “重地” 的 hashCode() 相同，然而 equals() 则为 false，因为在散列表中，hashCode() 相等即两个键值对的哈希值相等，然而哈希值相等，并不一定能得出键值对相等。
 
 hashCode的作用原理和示例解析 见： https://blog.csdn.net/weixin_30604651/article/details/99526025
-
 简要总结：
-
-特性和作用：
-
+ 1. 特性和作用：
  （1）HashCode的存在主要是用于查找的快捷性，而equals是用于比较两个对象的是否相等的。HashCode是用来在散列存储结构中（如List、Set）确定对象的存储地址的；
+      哈希算法也称为散列算法，是将数据依特定算法直接指定到一个地址上。
+      当集合要添加新的元素时，先调用这个元素的HashCode方法，就一下子能定位到它应该放置的物理位置上。
+（2）如果两个对象相同， equals方法一定返回true，并且这两个对象的HashCode一定相同；
+（4）两个对象的HashCode相同，并不一定表示两个对象就相同，也就是equals方法不一定返回true，只能够说明这两个对象在散列存储结构中，如Hashtable，他们存放在同一个篮子里。
+（2）如果两个类有相同的HashCode，例如 9除以8 和 17除以8的余数都是1，也就是说，我们先通过 HashCode来判断两个类是否存放某个桶里，但这个桶里可能有很多类，那么我们就需要再通过equals在这个桶里找到我们要的类。  
+
+ 2. HashCode作用
+   Java中的集合有两类，一类是List，再有一类是Set。前者集合内的元素是有序的，元素可以重复；后者元素无序，但元素不可重复。 
+   equals方法可用于保证元素不重复，但是，如果每增加一个元素就检查一次，如果集合中现在已经有1000个元素，那么第1001个元素加入集合时，就要调用1000次    equals方法。这显然会大大降低效率。 于是，Java采用了哈希表的原理。
 
 哈希算法也称为散列算法，是将数据依特定算法直接指定到一个地址上。
+这样一来，当集合要添加新的元素时，先调用这个元素的HashCode方法，就一下子能定位到它应该放置的物理位置上。
 
-当集合要添加新的元素时，先调用这个元素的HashCode方法，就一下子能定位到它应该放置的物理位置上。
+（1）如果这个位置上没有元素，它就可以直接存储在这个位置上，不用再进行任何比较了；
+（2）如果这个位置上已经有元素了，就调用它的equals方法与新元素进行比较，相同的话就不存了；
+（3）不相同的话，也就是发生了Hash key相同导致冲突的情况，那么就在这个Hash key的地方产生一个链表，将所有产生相同HashCode的对象放到这个单链表上去，串在一起（很少出现）。  这样一来实际调用equals方法的次数就大大降低了，几乎只需要一两次。 
 
-（2）如果两个对象相同， equals方法一定返回true，并且这两个对象的HashCode一定相同；
-
-（4）两个对象的HashCode相同，并不一定表示两个对象就相同，也就是equals方法不一定返回true，只能够说明这两个对象在散列存储结构中，如Hashtable，他们存放在同一个篮子里。
-
-（2）如果两个类有相同的HashCode，例如9除以8和17除以8的余数都是1，也就是说，我们先通过 HashCode来判断两个类是否存放某个桶里，但这个桶里可能有很多类，那么我们就需要再通过equals在这个桶里找到我们要的类。  
-
+HashMap 采用一种所谓的 “Hash 算法” 来决定每个元素的存储位置。当程序执行 map.put(String,Obect)方法 时，系统将调用String（key值）的 hashCode() 方法得到其 hashCode 值 —— 每个 Java 对象都有 hashCode() 方法，都可通过该方法获得它的 hashCode 值。得到这个对象的 hashCode 值之后，系统会根据该 hashCode 值来决定该元素的存储位置。源码如下:略
+  当系统决定存储 HashMap 中的 key-value 对时，完全没有考虑 Entry 中的 value，仅仅只是根据 key 来计算并决定每个 Entry 的存储位置。
+  这也说明了前面的结论：我们完全可以把 Map 集合中的 value 当成 key 的附属，当系统决定了 key 的存储位置之后，value 随之保存在那里即可。
+  
 public class Main {
     public static void main(String[] args) {
         String str1 = "OK";
@@ -62,35 +87,28 @@ public class Main {
         System.out.println(str4.hashCode());
     }
 }
-2524
 
+2524
 2018699554
-
 2524
-
 1311053135
 
-其中str1和str3拥有相同的散列码，这是因为字符串的散列码(即hsahCode值)是由内容导出的。而字符串穿缓冲str2和str4的却不想等，这是因为他俩没有hashCode方法，他们的散列码由Object的hashCode方法导出的对象的存储地址。
+其中str1和str3拥有相同的散列码，这是因为字符串的散列码(即hsahCode值)是由内容导出的。而字符串缓冲str2和str4的却不想等，这是因为他俩没有hashCode方法，他们的散列码由Object的hashCode方法导出的对象的存储地址。【因为String重写了equals和hashCode方法，字符串缓冲流没有重写，用的还是Object的】
 
+【***哈希表hashtable(key，value) 的原理如上，即Java创建对象存储对象也是用的哈希表hashtable(key，value)，不是只有hashMap才有到的。】
 
 4.final 在 java 中有什么作用？
 
 修饰 类：类不能被继承
-
 修饰 方法：方法不能被重写/修改
-
 修饰变量 被修饰后即为 常量，常量必须初始化，初始化后不能被修改。
-
 
 
 5.java 中的 Math.round(-1.5) 等于多少？
 
 答案：-1
-
 因为在数轴上取值时，中间值（0.5）向右取整，所以正 0.5 是往上取整，负 0.5 是直接舍弃。
-
 往大的方向舍弃，0.5 --> 1; 1.5 --> 2
-
 
 
 6.String 属于基础的数据类型吗？
@@ -100,45 +118,41 @@ public class Main {
 基础类型有 8 种：byte、boolean、char、short、int、float、long、double，而 String 属于对象。
 
 
-
 7.java 中操作字符串都有哪些类？它们之间有什么区别？
 
 操作字符串的类有：String、StringBuffer、StringBuilder。
 
-String 和 StringBuffer、StringBuilder 的区别在于 String声明的是不可变的对象，每次操作都会产生新的String对象，然后将指针指向新的对象，而StringBuffer、StringBuilder 可以在原对象的基础上进行操作，所以经常改变字符串内容的情况下最好不要使用 String。
-
-而StringBuffer 和 StringBuilder 之间的区别在于，StringBuffer是线程安全的，StringBuilder非线程安全，但是不安全的比安全的新能高，所以单线程使用builder，多线程用buffer。
-
+String 和 StringBuffer、StringBuilder 的区别在于 ：
+	（1）String声明的是不可变的对象，每次操作都会产生新的String对象，然后将指针指向新的对象，而StringBuffer、StringBuilder 可以在原对象的基础上进行操作，所以经常改变字符串内容的情况下最好不要使用 String。
+	（2）而StringBuffer 和 StringBuilder 之间的区别在于，StringBuffer是线程安全的，StringBuilder非线程安全，但是不安全的比安全的新能高，所以单线程使用builder，多线程用buffer。
 
 
 8.String str="i"与 String str=new String("i")一样吗？
 
-不一样，因为内存分配的方式不一样。String str="i" ，Java虚拟机会将其分配到常量池中；而new的方式会分配到 堆内存中。
-
+不一样，因为 内存分配的方式 不一样。
+String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方式会分配到 堆内存中。
 
 
 9.如何将字符串反转？
 
 使用 StringBuilder 或者 stringBuffer 的 reverse() 方法。
-
 或者转数组反转输出。【toCharArray 转数组（将字符串分成单个字符的数组）】
-
 
 
 10.String 类的常用方法都有那些？
 
-indexOf()：返回指定字符的索引。
-charAt()：返回指定索引处的字符。
-replace()：字符串替换。
-trim()：去除字符串两端空白。
-split()：分割字符串，返回一个分割后的字符串数组。
-getBytes()：返回字符串的 byte 类型数组。
-length()：返回字符串长度。
-toLowerCase()：将字符串转成小写字母。
-toUpperCase()：将字符串转成大写字符。
-substring()：截取字符串。
-equals()：字符串比较。
-toCharArray 转数组（将字符串分成单个字符的数组）
+	indexOf()：返回指定字符的索引。
+	charAt()：返回指定索引处的字符。
+	replace()：字符串替换。
+	trim()：去除字符串两端空白。
+	split()：分割字符串，返回一个分割后的字符串数组。
+	getBytes()：返回字符串的 byte 类型数组。
+	length()：返回字符串长度。
+	toLowerCase()：将字符串转成小写字母。
+	toUpperCase()：将字符串转成大写字符。
+	substring()：截取字符串。
+	equals()：字符串比较。
+	toCharArray 转数组（将字符串分成单个字符的数组）
 
 
 11.抽象类必须要有抽象方法吗？
@@ -146,13 +160,10 @@ toCharArray 转数组（将字符串分成单个字符的数组）
 抽象类不一定有抽象方法；有抽象方法一定是抽象类
 
 
-
 12.普通类和抽象类有哪些区别？
 
 普通类可以实例化，但是不能有抽象方法，
-
 抽象类不能被实例化，只能被继承，有抽象方法
-
 
 
 13.抽象类能使用 final 修饰吗？
@@ -160,13 +171,10 @@ toCharArray 转数组（将字符串分成单个字符的数组）
 不能，final修饰类不能被继承，而抽象类必须被继承才能使用
 
 
-
 14.接口和抽象类有什么区别？
 
-接口：   被实现 implements ；不能有构造函数；多实现；方法均为public。
-
-抽象类：被继承 extends；       可以有构造函数；单继承；方法可以是任意修饰符； 有抽象方法和普通方法。
-
+接口：被实现 implements ；不能有构造函数；多实现；方法均为public。
+抽象类：被继承 extends； 可以有构造函数；单继承；方法可以是任意修饰符； 有抽象方法和普通方法。
 实现、构造函数、实现数量、方法访问修饰符。
 
 
@@ -175,23 +183,18 @@ toCharArray 转数组（将字符串分成单个字符的数组）
 
 输入流、输出流；字节流（ 8 位传输以字节为单位）、字符流（ 16 位传输以字符为单位）
 
-【 bit=1  二进制数据0或1 (简称 “位” 吧)  信息的最小单位
-
+ 【 bit=1  二进制数据0或1 (简称 “位” 吧)  信息的最小单位
     byte=8bit  1个字节等于8位 存储空间的基本计量单位
-
-   一个英文字母 = 1byte = 8bit 1个英文字母是1个字节，也就是8位
-
-   一个汉字 = 2byte = 16bit 1个汉字是两个字节，也就是16位 】
-
+    一个英文字母 = 1byte = 8bit 1个英文字母是1个字节，也就是8位
+    一个汉字 = 2byte = 16bit 1个汉字是两个字节，也就是16位 】
 
 
 16.BIO、NIO、AIO 有什么区别？【后续1】
 
 
-
 17.Files的常用方法都有哪些？
+   copy、exists、createFile、delete、write
 
-copy、exists、createFile、delete、write
 
 
 
