@@ -76,16 +76,16 @@ HashMap 采用一种所谓的 “Hash 算法” 来决定每个元素的存储�
   这也说明了前面的结论：我们完全可以把 Map 集合中的 value 当成 key 的附属，当系统决定了 key 的存储位置之后，value 随之保存在那里即可。
   
 public class Main {
-    public static void main(String[] args) {
-        String str1 = "OK";
-        StringBuffer str2 = new StringBuffer(str1);
-        String str3 = new String(str1);
-        StringBuilder str4 = new StringBuilder(str1);
-        System.out.println(str1.hashCode());
-        System.out.println(str2.hashCode());
-        System.out.println(str3.hashCode());
-        System.out.println(str4.hashCode());
-    }
+    public static void main(String[] args) {
+	String str1 = "OK";
+	StringBuffer str2 = new StringBuffer(str1);
+	String str3 = new String(str1);
+	StringBuilder str4 = new StringBuilder(str1);
+	System.out.println(str1.hashCode());
+	System.out.println(str2.hashCode());
+	System.out.println(str3.hashCode());
+	System.out.println(str4.hashCode());
+    }
 }
 
 2524
