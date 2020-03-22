@@ -97,15 +97,25 @@ public class Main {
 
 【***哈希表hashtable(key，value) 的原理如上，即Java创建对象存储对象也是用的哈希表hashtable(key，value)，不是只有hashMap才有到的。】
 
-4.final 在 java 中有什么作用？
+  链表法就是将相同hash值的对象组织成一个链表放在hash值对应的槽位；
+  开放地址法是通过一个探测算法，当某个槽位已经被占据的情况下继续查找下一个可以使用的槽位。
+  java.util.HashMap采用的链表法的方式，链表是单向链表。形成单链表的核心代码如下：
+protected Entry(int hash, K key, V value, Entry<K,V> next) {
+    this.hash = hash;
+    this.key =  key;
+    this.value = value;
+    this.next = next;
+}
+  上面方法的代码很简单，但其中包含了一个设计：系统总是将新添加的 Entry 对象放入 table 数组的 bucketIndex 索引处——如果 bucketIndex 索引处已经有了一个 Entry 对象，那新添加的 Entry 对象指向原有的 Entry 对象(产生一个 Entry 链)，如果 bucketIndex 索引处没有 Entry 对象，也就是上面程序代码的 e 变量是 null，也就是新放入的 Entry 对象指向 null，也就是没有产生 Entry 链。
 
+
+4.final 在 java 中有什么作用？
 修饰 类：类不能被继承
 修饰 方法：方法不能被重写/修改
 修饰变量 被修饰后即为 常量，常量必须初始化，初始化后不能被修改。
 
 
 5.java 中的 Math.round(-1.5) 等于多少？
-
 答案：-1
 因为在数轴上取值时，中间值（0.5）向右取整，所以正 0.5 是往上取整，负 0.5 是直接舍弃。
 往大的方向舍弃，0.5 --> 1; 1.5 --> 2
@@ -131,6 +141,11 @@ String 和 StringBuffer、StringBuilder 的区别在于 ：
 
 不一样，因为 内存分配的方式 不一样。
 String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方式会分配到 堆内存中。
+【栈:保存局部变量的值：
+   包括 1.基本数据类型的值。
+	2.保存类的实例，即堆区对象的引用（指针）。
+	3.保存加载方法时的帧。
+  堆：用来存放动态产生的数据，比如new出来的对象。】
 
 
 9.如何将字符串反转？
@@ -162,7 +177,7 @@ String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方�
 
 12.普通类和抽象类有哪些区别？
 
-普通类可以实例化，但是不能有抽象方法，
+普通类可以实例化，但是不能有抽象方法；
 抽象类不能被实例化，只能被继承，有抽象方法
 
 
@@ -173,10 +188,10 @@ String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方�
 
 14.接口和抽象类有什么区别？
 
-接口：被实现 implements ；不能有构造函数；多实现；方法均为public。
-抽象类：被继承 extends； 可以有构造函数；单继承；方法可以是任意修饰符； 有抽象方法和普通方法。
-实现、构造函数、实现数量、方法访问修饰符。
+实现继承（使用）、构造函数、实现数量、方法访问修饰符。
 
+接口：被实现 implements ；不能有构造函数；多实现；方法均为public。
+抽象类：被继承 extends； 可以有构造函数； 单继承；方法可以是任意修饰符； 有抽象方法和普通方法。
 
 
 15.java 中 IO 流分为几种？
@@ -184,9 +199,9 @@ String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方�
 输入流、输出流；字节流（ 8 位传输以字节为单位）、字符流（ 16 位传输以字符为单位）
 
  【 bit=1  二进制数据0或1 (简称 “位” 吧)  信息的最小单位
-    byte=8bit  1个字节等于8位 存储空间的基本计量单位
-    一个英文字母 = 1byte = 8bit 1个英文字母是1个字节，也就是8位
-    一个汉字 = 2byte = 16bit 1个汉字是两个字节，也就是16位 】
+    byte = 8bit  1个字节等于8位 存储空间的基本计量单位
+    一个英文字母 = 1byte = 8bit (1个英文字母是1个字节，也就是8位)
+    一个汉字 = 2byte = 16bit (1个汉字是两个字节，也就是16位) 】
 
 
 16.BIO、NIO、AIO 有什么区别？【后续1】
@@ -197,7 +212,6 @@ String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方�
 
 
 
-
 二、容器
 
 18.java 容器都有哪些？
@@ -205,28 +219,24 @@ String str="i" ，Java虚拟机会将其分配到 常量池 中；而new的方�
 【Set、List、Map】
 
 Collection
-List
-ArrayList
-LinkedList
-Vector (线程安全)
-Stack  (线程安全)
-Set
-HashSet
-LinkedHashSet
-TreeSet
+	List
+		ArrayList
+		LinkedList
+		Vector (线程安全)
+		Stack  (线程安全)
+	Set
+		HashSet
+		LinkedHashSet
+		TreeSet
 Map
-HashMap
-LinkedHashMap
-TreeMap
-ConcurrentHashMap (线程安全)
-Hashtable (线程安全)
+	HashMap
+	LinkedHashMap
+	TreeMap
+	ConcurrentHashMap (线程安全)
+	Hashtable (线程安全)
+	
 容器主要包括 Collection 和 Map 两种，其下又有很多子类，Collection 存储着对象的集合，而 Map 存储着键值对（两个对象）的映射表。
-
 Java容器类基本上都是在java.util包下，Java容器分为两大类，Collection类和Map类，结构如下图：
-
-
-
-
 
 
 19.Collection 和 Collections 有什么区别？
@@ -234,29 +244,24 @@ Java容器类基本上都是在java.util包下，Java容器分为两大类，Col
 【Collection是Java容器集合接口，有List、Set等；Collections是工具类】
 
 Collection是一个集合接口，提供了对集合对象进行操作的所有通用接口方法；所有集合都是它的子类，如List、Set等。
-
 Collections是一个包装类，包含了很多静态方法，不能被实例化，像工具类，如提供的排序方法，Collections.sort(list)。
-
 
 
 20.List、Set、Map 之间的区别是什么？
 
 List、Set 和 Map主要区别体现在 元素是否有序、元素是否允许重复；
-
 List 元素有序，可重复；
 
 Set 元素无序，不重复(去重且无序，无序是不按照插入的顺序输出)；其中TreeSet有序（用二叉树排序）
-
 Map 元素无序，key值唯一，value可重复；其中TreeMap有序（用二叉树排序）
 
+【其中，其中TreeSet有序，需要实现Comparable接口并自定义compareTo排序规则 --- 如class Teacher implements Comparable<Teacher> 】
 【List分为ArrayList和LinkedList，其中ArrayList查询速度快，但增删速度较慢，LinkedList的增删速度快，查询速度较慢】
 
 补充：
-
 hashSet具有去重功能
 
 例:  创建一个hashSet 保存 f f a a b b d d  
-
 HashSet<String> set = new HashSet<>();
 set.add("f"); 
 set.add("f");
@@ -275,17 +280,17 @@ for (String string : set) {
 
 21.HashMap 和 Hashtable 有什么区别？
 
- (1) 存储：HashMap 运行 key 和 value 为 null，而 Hashtable 不允许。
+ (1) 存储：HashMap 允许 key 和 value 为 null，而 Hashtable 不允许。
  (2) 线程安全：Hashtable 是线程安全的，而 HashMap 是非线程安全的。
 
 推荐：Hashtable 是保留类不建议使用，推荐在 单线程下使用 HashMap 替代，如需多线程用 ConcurrentHashMap 替代。
-
 
 
 22.如何决定使用 HashMap 还是 TreeMap？
 
 对于在 Map 中插入、删除、定位一个元素这类操作，HashMap 是最好的选择，因为相对而言 HashMap 的插入会更快，但如果你要对一个 key 集合进行有序的遍历，那 TreeMap 是更好的选择。
 
+TreeMap<String, String> map = new TreeMap<String, String>();
 public static void init(Map<String, String> map) {
      map.put("c", "1");
      map.put("a", "1");
@@ -300,15 +305,13 @@ c : 1
 参考：https://www.cnblogs.com/chenmo-xpw/p/4922641.html
 
 
-
 23.说一下 HashMap 的实现原理？
 
-HashMap 是基于 Hash 算法实现的，通过 put(key,value)存储，get(key)来获取。当传入 key 时，HashMap 会根据 key. hashCode() 计算出 hash 值，根据 hash 值将 value 保存在 bucket 里。当计算出的 hash 值相同时，我们称之为 hash 冲突，HashMap 的做法是用 链表和红黑树 存储相同 hash 值的 value。当 hash 冲突的个数比较少时，使用链表；冲突个数多时则使用红黑树。【链地址法：来一个元素加一个，让这个位置存储一个指针，指向一个链表，让所有相同位置的元素都放在这个链表中】
-
-
+HashMap 是基于 Hash 算法实现的，通过 put(key,value)存储，get(key)来获取。当传入 key 时，HashMap 会根据 key. hashCode() 计算出 hash 值，根据 hash 值将 value 保存在 bucket 里。
+当计算出的 hash 值相同时，我们称之为 hash 冲突，HashMap 的做法是用 链表和红黑树 存储相同 hash 值的 value。当 hash 冲突的个数比较少时，使用链表；冲突个数多时则使用红黑树。
+【链地址法：来一个元素加一个，让这个位置存储一个指针，指向一个链表，让所有相同位置的元素都放在这个链表中】
 
 相关参考链接：
-
 https://www.jianshu.com/p/1b511b3889ae
 
 https://cloud.tencent.com/developer/article/1361248
