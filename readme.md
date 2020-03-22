@@ -106,6 +106,7 @@ protected Entry(int hash, K key, V value, Entry<K,V> next) {
     this.value = value;
     this.next = next;
 }
+【那每个节点结构是由数据域和指针域组成，数据域是存放数据的，而指针域存放下一结点的地址。https://cloud.tencent.com/developer/article/1525949】
   上面方法的代码很简单，但其中包含了一个设计：系统总是将新添加的 Entry 对象放入 table 数组的 bucketIndex 索引处——如果 bucketIndex 索引处已经有了一个 Entry 对象，那新添加的 Entry 对象指向原有的 Entry 对象(产生一个 Entry 链)，如果 bucketIndex 索引处没有 Entry 对象，也就是上面程序代码的 e 变量是 null，也就是新放入的 Entry 对象指向 null，也就是没有产生 Entry 链。
 
 
@@ -124,7 +125,6 @@ protected Entry(int hash, K key, V value, Entry<K,V> next) {
 6.String 属于基础的数据类型吗？
 
 不是，是String包装类
-
 基础类型有 8 种：byte、boolean、char、short、int、float、long、double，而 String 属于对象。
 
 
@@ -310,6 +310,9 @@ c : 1
 HashMap 是基于 Hash 算法实现的，通过 put(key,value)存储，get(key)来获取。当传入 key 时，HashMap 会根据 key. hashCode() 计算出 hash 值，根据 hash 值将 value 保存在 bucket 里。
 当计算出的 hash 值相同时，我们称之为 hash 冲突，HashMap 的做法是用 链表和红黑树 存储相同 hash 值的 value。当 hash 冲突的个数比较少时，使用链表；冲突个数多时则使用红黑树。
 【链地址法：来一个元素加一个，让这个位置存储一个指针，指向一个链表，让所有相同位置的元素都放在这个链表中】
+【链地址法，又有“头插”和“尾插”的方式，如 这里存放 1->6->7 ,插入链表的时采用‘头插’的方式，也就是插入链表的最前面（图中里数组最近的元素）（头插发，即从头部插入，后面的数据靠前，先插入的数据靠后） 】
+【1.7之前是头插法，1.8之后是尾插法。头插法有时候会有死循环】
+【为什么用“头插”？ 因为经常发生这样的事情：新加入的元素很可能被再次访问到，所以放到头的话，如果查找就不用再遍历链表了”】
 
 相关参考链接：
 https://www.jianshu.com/p/1b511b3889ae
@@ -318,8 +321,26 @@ https://cloud.tencent.com/developer/article/1361248
 
 https://mp.weixin.qq.com/s?__biz=MzU1MDE4MzUxNA==&mid=2247483679&idx=1&sn=4a51847fb40fafe418bca0b906a03e0a&chksm=fba5362accd2bf3cba68324072863e93a354e65ecb1bdfb9f7dbd857af41f553b72d46b2cb36&scene=21#wechat_redirect
 
-【 HashMap是由数组+链表组成。】
+【 HashMap是由数组+链表组成。 hash冲突多时会用红黑树，少时会用单链表。 Hash函数代表着一类函数。】
+【** 什么时候用到红黑树：https://www.cnblogs.com/mzc-blogs/p/5800084.html
+	3. put函数的实现
+		put函数大致的思路为：
 
+		对key的hashCode()做hash，然后再计算index;
+		如果没碰撞直接放到bucket里；
+		如果碰撞了，以链表的形式存在buckets后；
+		如果碰撞导致链表过长(大于等于TREEIFY_THRESHOLD)，就把链表转换成红黑树；
+		如果节点已经存在就替换old value(保证key的唯一性)
+		如果bucket满了(超过load factor*current capacity)，就要resize。（resize，我的理解就是rehash，在resize的过程，简单的说就是把bucket扩充为2倍，之后重新计算index，把节点再放到新的bucket中。）
+		
+	4. get函数的实现
+		在理解了put之后，get就很简单了。大致思路如下：
+
+		bucket里的第一个节点，直接命中；
+		如果有冲突，则通过key.equals(k)去查找对应的entry
+		若为树，则在树中通过key.equals(k)查找，O(logn)；
+		若为链表，则在链表中通过key.equals(k)查找，O(n)。
+】
 
 
 24.说一下 HashSet 的实现原理？
@@ -327,51 +348,39 @@ https://mp.weixin.qq.com/s?__biz=MzU1MDE4MzUxNA==&mid=2247483679&idx=1&sn=4a5184
 HashSet 是基于 HashMap 实现的，HashSet 底层使用 HashMap 来保存所有元素，因此 HashSet 的实现比较简单，相关 HashSet 的操作，基本上都是直接调用底层 HashMap 的相关方法来完成，HashSet 不允许重复的值（见20）。
 
 
-
 25.ArrayList 和 LinkedList 的区别是什么？
 
  (1) 数据结构：ArrayList 是动态数组 的数据结构实现；LinkedList 是双向链表的数据结构实现 ；
-
  (2) 增删查速度：ArrayList 增删较慢，查询快；LinkedList 增删快，查询慢；因为  查询时 LinkedList 是线性的数据存储方式，所以需要移动指针从前往后依次查找； ArrayList 增删操作要影响数组内的其他数据的下标。
 
 综合来说，在需要频繁读取集合中的元素时，更推荐使用 ArrayList，而在插入和删除操作较多时，更推荐使用 LinkedList。
 
 
-
 26.如何实现数组和 List 之间的转换？
 
 数组转List：Arrays.asList(array);
-
 List转数组：使用 List 自带的 toArray() 方法，List.toArray()；
-
 
 
 27.ArrayList 和 Vector 的区别是什么？
 
     (1) 线程安全：ArrayList 非线程安全；Vector是线程安全（Vector 使用了 Synchronized 来实现线程同步，是线程安全的）。
-
     (2) 性能：ArrayList性能方面 肯定优于 Vector。
-
     (3) 扩容：ArrayList 和 Vector 都会根据实际的需要动态的调整容量，只不过在 Vector 扩容每次会增加 1 倍，而 ArrayList 只会增加 50%。
-
 
 
 28.Array 和 ArrayList 有何区别？
 
-【Array是普通数组，初始化时必须声明大小；ArrayList是对象数组，长度可以变化；】
+【Array是普通数组，初始化时必须声明大小； ArrayList是对象数组，长度可以变化；】
 
  (1) Array 可以存储基本数据类型和对象，List只能存储对象;
-
  (2) Array 是指定固定大小的，ArrayList大小可以自动扩充；
-
  (3) Array内置方法没有List多，如 addAll、removeAll、iteration等方法只有ArrayList有。
-
 
 
 29.在 Queue 中 poll()和 remove()有什么区别？
 
 相同点：都是返回第一个元素，并在队列中删除 返回的对象。
-
 不同点：如果没有元素，poll会返回null； remove会抛出NoSuchElementException 异常
 
  Queue<String> queue = new LinkedList<String>();
@@ -392,17 +401,13 @@ List转数组：使用 List 自带的 toArray() 方法，List.toArray()；
 Vector、Hashtable、Stack 都是线程安全的，而像 HashMap 则是非线程安全的，不过在 JDK 1.5 之后随着 Java. util. concurrent 并发包的出现，它们也有了自己对应的线程安全类，比如 HashMap 对应的线程安全类就是 ConcurrentHashMap。
 
 
-
 31.迭代器 Iterator 是什么？
 
 了解迭代器：https://blog.csdn.net/qq_33642117/article/details/52225247
-
 【可迭代是Java集合框架下的所有集合类的一种共性，也就是把集合中的所有元素遍历一遍。
-
    迭代器（Iterator）模式，又叫做游标模式，它的含义是，提供一种方法访问一个容器对象中各个元素，而又不需暴露该对象的内部细节。】
 
 public class Test3 {
- 
 	public static void main(String[] args) {
 		List<String>list=new ArrayList<>();
 		list.add("a");
@@ -411,7 +416,7 @@ public class Test3 {
 		//调用迭代器的hasNext方法，判断是否有下一个元素
 		while (it.hasNext()) {
 		    //将迭代器的下标移动一位，并得到当前位置的元素值
-			System.out.println(it.next());	
+		    System.out.println(it.next());	
 		}	
 	}
 }
@@ -420,31 +425,24 @@ public class Test3 {
 总结： 迭代器，提供一种访问一个集合对象各个元素的途径，同时又不需要暴露该对象的内部细节。java通过提供Iterator和Iterable俩个接口来实现集合类的可迭代性，迭代器主要的用法是：首先用hasNext（）作为循环条件，再用next（）方法得到每一个元素，最后在进行相关的操作。
 
 
-
 32.Iterator 怎么使用？有什么特点？
 
 使用如上，Iterator 的特点是更加安全，因为它可以确保，在当前遍历的集合元素被更改的时候，就会抛出 ConcurrentModificationException 异常。
 
 
-
 33.Iterator 和 ListIterator 有什么区别？
 
  (1) Iterator 可以遍历所有的集合(List、Set集合)；ListIterator只能遍历List集合(ArrayList、LinkedList和Vector的时候可以使用)；
-
  (2) ListIterator 从 Iterator 接口继承（public interface ListIterator<E> extends Iterator<E> ），然后添加了一些额外的功能。如add方法，可以向List中添加对象，而Iterator不能。即 ListIterator方法多一些。 所以 ListIterator 可以双向遍历（有 向前/后遍历 的方法）。
-
 
 
 34.怎么确保一个集合不能被修改？
 
  参考：https://blog.csdn.net/syilt/article/details/90548237
-
 【使用 final 修饰，不行；如下，代码还是输出 three 。
-
-    对于Map等集合类型，我们只能对于其引用不能被再次初始化，而其中的值则可以变化】
+  对于Map等集合类型，我们只能对于其引用不能被再次初始化，而其中的值则可以变化】
 
 private static final Map<Integer, String> map = Maps.newHashMap();
- 
 static {
     map.put(1, "one");
     map.put(2, "two");
@@ -457,38 +455,26 @@ public static void main(String[] args) {
 
 代码还是输出 three
 
-
-
-
-可以使用 Collections. unmodifiableCollection(Collection c) 方法来创建一个只读集合，这样改变集合的任何操作都会抛出 Java. lang. UnsupportedOperationException 异常。
+可以使用 Collections. unmodifiableCollection(Collection c) 方法来创建一个只读集合，这样改变集合的任何操作都会抛出 Java.lang. UnsupportedOperationException 异常。
 
 示例代码如下：
-
     List<String> list = new ArrayList<>();
-    list. add("x");
+    list.add("x");
     Collection<String> clist = Collections. unmodifiableCollection(list);
-    clist. add("y"); // 运行时此行报错
-    System. out. println(list. size());
+    clist.add("y"); // 运行时此行报错
+    System.out.println(list. size());
 
 
 三、多线程
 
 35.并行和并发有什么区别？
 
-    【并行是多个进程同时运行（在同一个CPU上）；并发是一个进程多个线程同时运行（在同一个进程上）。】
-
+【并行是多个进程同时运行（在同一个CPU上）；并发是一个进程多个线程同时运行（在同一个进程上）。】
 并行：多个处理器或多核处理器 同时 处理多个任务。
-
 并发：多个任务在同一个CPU核上。按细分的时间片轮流执行，从逻辑上看 那些任务是 同时执行的。
 
-
-
 并发 = 两个队列和一台咖啡机。
-
 并行 = 两个队列和两台咖啡机。
-
-
-
 
 
 36.线程和进程的区别？
@@ -496,11 +482,9 @@ public static void main(String[] args) {
 一个程序下至少有一个进程，一个进程下至少有一个线程，一个进程下也可以有多个线程来增加程序的执行速度。
 
 
-
 37.守护线程是什么？
 
-【 在Java中有两类线程：User Thread(用户线程)、Daemon Thread(守护线程) ；
-
+【  在Java中有两类线程：User Thread(用户线程)、Daemon Thread(守护线程) ；
     用个比较通俗的比如，任何一个守护线程都是整个JVM中所有非守护线程的保姆：
 
     只要当前JVM实例中尚存在任何一个非守护线程没有结束，守护线程就全部工作；只有当最后一个非守护线程结束时，守护线程随着JVM一同结束工作。
@@ -514,7 +498,6 @@ public static void main(String[] args) {
 
 那Java的守护线程是什么样子的呢。当JVM中所有的线程都是守护线程的时候，JVM就可以退出了；如果还有一个
 或以上的非守护线程则JVM不会退出。
-
 
 
 38.创建线程有哪几种方式？
