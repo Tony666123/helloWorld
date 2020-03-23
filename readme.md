@@ -490,43 +490,41 @@ public static void main(String[] args) {
     只要当前JVM实例中尚存在任何一个非守护线程没有结束，守护线程就全部工作；只有当最后一个非守护线程结束时，守护线程随着JVM一同结束工作。
     Daemon的作用是为其他线程的运行提供便利服务，守护线程最典型的应用就是 GC (垃圾回收器)，它是一个称职的守护者。
 
-    User和Daemon两者几乎没有区别，唯一的不同之处就在于虚拟机的离开：如果 User Thread已经全部退出运行了，只剩下Daemon Thread存在了，虚拟机也就退出了。 因为没有了被守护者，Daemon也就没有工作可做了，也就没有继续运行程序的必要了。    参考： https://blog.csdn.net/shimiso/article/details/8964414 】
+    User和Daemon两者几乎没有区别，唯一的不同之处就在于虚拟机的离开：如果 User Thread已经全部退出运行了，只剩下Daemon Thread存在了，虚拟机也就退出了。 因为没有了被守护者，Daemon也就没有工作可做了，也就没有继续运行程序的必要了。    
+    参考： https://blog.csdn.net/shimiso/article/details/8964414  】
 
 用户线程：我们平常创建的普通线程。守护线程：用来服务于用户线程；不需要上层逻辑介入。
 
 守护线程是运行在后台的一种特殊进程。它独立于控制终端并且周期性地执行某种任务或等待处理某些发生的事件。在 Java 中垃圾回收线程就是特殊的守护线程。也就是说 守护线程 不依赖于终端，但是 依赖于系统，与系统“同生共死”。
 
-那Java的守护线程是什么样子的呢。当JVM中所有的线程都是守护线程的时候，JVM就可以退出了；如果还有一个
-或以上的非守护线程则JVM不会退出。
+那Java的守护线程是什么样子的呢。当JVM中所有的线程都是守护线程的时候，JVM就可以退出了；如果还有一个或以上的非守护线程则JVM不会退出。
+JRE判断程序是否执行结束的标准是所有的前台执线程(用户线程)行完毕了，而不管后台线程(守护线程)的状态，因此，在使用后台线程时一定要注意这个问题。 
+	
+    example: 垃圾回收线程就是一个经典的守护线程，当我们的程序中不再有任何运行的Thread,程序就不会再产生垃圾，垃圾回收器也就无事可做，所以当垃圾回收线程是JVM上仅剩的线程时，垃圾回收线程会自动离开。它始终在低级别的状态中运行，用于实时监控和管理系统中的可回收资源。
 
 
 38.创建线程有哪几种方式？
-
+  【参考 ： https://blog.csdn.net/qq_38974634/article/details/81315900 创建多线程的4种方式】
+   
   (1) 继承Thread类，重写run方法
-
   (2) 实现Runnable接口，实现run方法
-
   (3) 实现Callable接口，创建Callable接口的实现类，并实现call()方法，该call()方法将作为线程执行体，并且有返回值。
-
-
-
-参考如下： https://blog.csdn.net/sinat_34814635/article/details/78959162
+  (4) 线程池
 
 /**
- * 通过继承Thread实现run方法
+ * **通过继承Thread实现run方法
  */
-public class Actor extends Thread{
+public class ThreadDemo extends Thread{
     @Override
     public void run(){
         XXX
         System.out.println(getName()+"的演出结束了！");
-
     }
 }
-
-
-================================第二方式==============================
-https://blog.csdn.net/beidaol/article/details/89135277
+使用：ThreadDemo threadDemo = new ThreadDemo();
+      threadDemo.start();
+================================第二方式 (类似 实现runnable接口)==============================
+【 https://blog.csdn.net/beidaol/article/details/89135277 什么是多线程？如何实现多线程？】
 
 // 线程1
 Thread t1 = new Thread(new Runnable() {
@@ -536,8 +534,7 @@ Thread t1 = new Thread(new Runnable() {
        lockTest.method(Thread.currentThread());
     }
  }, "t1Name");
-
-        
+   
 // 线程2
 Thread t2 = new Thread(new Runnable() {
      @Override
@@ -545,12 +542,17 @@ Thread t2 = new Thread(new Runnable() {
         lockTest.method(Thread.currentThread());
      }
  }, "t2Name");
-       
+     
+     
 /**
- * 通过实现Runnable接口实现run方法
+ * **通过实现Runnable接口实现run方法
  */
-class Actress implements Runnable{
-
+ 使用：  TestRunnable testRunnable = new TestRunnable();
+        Thread thread = new Thread(testRunnable);
+        //thread.setDaemon(true);
+        thread.start();
+	
+class TestRunnable implements Runnable{
     @Override
     public void run() {
         xxx
@@ -561,18 +563,19 @@ class Actress implements Runnable{
     }
 }
 使用：
-
 public static void main(String[] args) {
      //启动线程通过继承Thread
-     Thread actor=new Actor();
+     Thread actor=new ThreadDemo();
      actor.setName("Mr. Thread");
      actor.start();
 
      //启动线程通过实现Runnable接口
-//   Thread actressThread=new Thread(new Actress(),"Ms. Runnable");
-//   actressThread.start();
+//   Thread runnableThread = new Thread(new TestRunnable(),"Ms. Runnable");
+//   runnableThread.start();
 }
-/** Callable 方式 */
+
+
+/** **Callable 方式 */
 public class CallableThreadTest implements Callable<Integer> {
 
     @Override
@@ -583,10 +586,9 @@ public class CallableThreadTest implements Callable<Integer> {
         }
         return i;
     }
-
 }
 
-    // 使用：
+    // 使用1：
     public static void main(String[] args) {
         CallableThreadTest ctt = new CallableThreadTest();
         FutureTask<Integer> ft = new FutureTask<>(ctt);
@@ -597,10 +599,25 @@ public class CallableThreadTest implements Callable<Integer> {
             }
         }
     }
-
+    // 使用2：
+	CallableDemo callableDemo = new CallableDemo();
+    	FutureTask futureTask = new FutureTask<>(callableDemo); 
+    	new Thread(futureTask).start();
+    	List<Integer> lists = (List<Integer>)futureTask.get(); //获取返回值
+    	for (Integer integer : lists) {
+		System.out.print(integer + "  ");
+	}
 
 补充：
-//Implements创建对象：只能通过new Thread(Runnable target)方式创建对象，只要target对象是同一个，那么创建出来的线程访问的资源对象都相同 [https://www.cnblogs.com/qq438649499/p/12190813.html]
+//implements创建对象：只能通过new Thread(Runnable target)方式创建对象，只要target对象是同一个，那么创建出来的线程访问的资源对象都相同 （即，第一个runnable执行后的属性变化影响第二个；第二个是第一个执行后的属性数据）
+参考：[https://www.cnblogs.com/qq438649499/p/12190813.html] 并发编程@线程基础知识回顾
+【如    TestRunnable runnable1 = new TestRunnable();
+        Thread runnableThread1 = new Thread(runnable1);
+        runnableThread1.start();
+
+      // TestRunnable runnable2 = new TestRunnable(); //如果是 new新的TestRunnable而新开的Thread，则还是新的原始线程。
+        Thread runnableThread2 = new Thread(runnable1); //这里的第二个线程，是以为第一个runnable1的数据为开始的了。
+        runnableThread2.start();】
 
  两个线程，两个线程访问的 两个线程各自的资源 （两个线程资源）
  TestThread testThread1 = new TestThread();
@@ -608,7 +625,7 @@ public class CallableThreadTest implements Callable<Integer> {
  Thread t1 = new Thread(testThread1);
  Thread t2 = new Thread(testThread2);
 
-两个线程，同一个资源对象（一个线程资源执行两个）
+ 两个线程，同一个资源对象（一个线程资源执行两个）
  TestThread testThread1 = new TestThread();
  TestThread testThread2 = new TestThread();
  Thread t1 = new Thread(testThread1);
@@ -619,27 +636,34 @@ public class CallableThreadTest implements Callable<Integer> {
  t1.start();
  t2.start();
 
+【 https://blog.csdn.net/beidaol/article/details/89135277 什么是多线程？如何实现多线程？
+  非线程安全：非线程安全的类，有共享的变量。
+  线程安全：当多个线程访问某个方法时，不管你通过怎样的调用方式、或者说这些线程如何交替地执行，我们在主程序中不需要去做任何的同步，
+  这个类的结果行为都是我们设想的正确行为，那么我们就可以说这个类是线程安全的。】
+【 synchronized 理解为只有一个线程可以使用被修饰的代码，如修饰方法，则只允许一个线程占有，另一个要等待】
+
+【参考： https://blog.csdn.net/sinat_34814635/article/details/78959162 lock锁说明】
+
+
 39.说一下 runnable 和 callable 有什么区别？
 
 【实现Runable 接口的run方法没有返回值，Callable有返回值 （Callable<Integer>，也体现在run方法上）】
-
-runnable 没有返回值，callable 可以拿到有返回值，callable 可以看作是 runnable 的补充。
+  runnable 没有返回值，callable 可以拿到有返回值，callable 可以看作是 runnable 的补充。
 
 
 
 40.线程有哪些状态？
 
-【线程状态有 5 种：初始、准备，运行、阻塞、死亡】 
-
-【https://blog.csdn.net/xingjing1226/article/details/81977129
-
+【线程状态有5种：初始、准备，运行、阻塞(等待阻塞、同步阻塞、其他阻塞)、死亡】 
+【https://blog.csdn.net/xingjing1226/article/details/81977129 线程的5种状态详解（**有线程的状态图 和 与等待队列相关的步骤和图）
 参考如下：https://blog.csdn.net/wuxing26jiayou/article/details/76647961
 
 线程和进程一样分为五个阶段：创建 New 、就绪 Runnable (start())、运行 Running 、阻塞 Blocked 、终止 Terminated ；
-
 线程有3个基本状态：执行、就绪、阻塞;
+多线程中栈一般用于存放局部变量，为线程私有，堆一般用于存放程序共享数据。
 
-多线程中栈一般用于存放局部变量，为线程私有，堆一般用于存放程序共享数据。】
+线程不安全：访问时不提供数据访问保护，有可能出现多个线程先后更改数据造成所得到的数据是脏数据。
+原因：线程安全问题都是由全局变量及静态变量引起的。若每个线程中对全局变量、静态变量只有读操作，而无写操作，一般来说，这个全局变量是线程安全的；若有多个线程同时执行写操作，一般都需要考虑线程同步，否则的话就可能影响线程安全。】
 
 NEW 尚未启动
 RUNNABLE 正在执行中
@@ -651,76 +675,65 @@ TERMINATED 执行完成
 
 41.sleep() 和 wait() 有什么区别？
 
-  (1) 哪个类：sleep 来自Thread类，wait 是来自Object。
-
-  (2) 释放锁机制：sleep()不会释放锁；wait()会释放锁。
-
+  (1) 哪个类：sleep 来自Thread类， wait 是来自Object。
+  (2) 释放锁机制：sleep()不会释放锁； wait()会释放锁。
   (3) 用法：sleep() 睡眠时间结束自动恢复； wait()需要 notify()/notifyAll() 唤醒
-
-       Wait通常被用于线程间交互，sleep通常被用于暂停执行。
-
-
+      Wait通常被用于线程间交互，sleep通常被用于暂停执行。
+      
 
 42.notify()和 notifyAll()有什么区别？
 
 【notify 唤醒单个线程，notifyAll唤醒所有线程】
+  notifyAll()会唤醒所有的线程（唤醒所有在等待该对象锁的线程），notify()之后唤醒一个线程（唤醒哪个是随机的）。
 
-notifyAll()会唤醒所有的线程，notify()之后唤醒一个线程。
-
+obj.wait()，当前线程调用对象的wait()方法，当前线程释放对象锁，进入等待队列。
+依靠notify()/notifyAll()唤醒或者wait(long timeout)timeout时间到自动唤醒。
+obj.notify()唤醒在此对象监视器上等待的单个线程，选择是任意性的。
+notifyAll()唤醒 在此对象监视器上 等待的所有线程。
 
 
 43.线程的 run()和 start()有什么区别？
 
    start()进入启动线程，进入准备状态，run()用于 执行线程的运行时代码 ，处于运行状态。
-
    run() 可以重复调用，而 start() 只能调用一次。
 
 补充：11) 为什么我们调用start()方法时会执行run()方法，为什么我们不能直接调用run()方法？
-
-这是另一个非常经典的java多线程面试问题。这也是我刚开始写线程程序时候的困惑。现在这个问题通常在电话面试或者是在初中级Java面试的第一轮被问到。这个问题的回答应该是这样的，当你调用start()方法时你将创建新的线程，并且执行在run()方法里的代码。但是如果你直接调用run()方法，它不会创建新的线程也不会执行调用线程的代码。阅读我之前写的《start与run方法的区别》这篇文章来获得更多信息。
-
-
+	这是另一个非常经典的java多线程面试问题。这也是我刚开始写线程程序时候的困惑。现在这个问题通常在电话面试或者是在初中级Java面试的第一轮被问到。这个问题的回答应该是这样的，当你调用start()方法时你将创建新的线程，并且执行在run()方法里的代码。但是如果你直接调用run()方法，它不会创建新的线程也不会执行调用线程的代码。阅读我之前写的《start与run方法的区别》这篇文章来获得更多信息。
 
 Example2：
-
 1、用start方法 和 直接run方法 启动线程的区别：
-
 示例：https://juejin.im/post/5b09274af265da0de25759d5
+
+2、run方法又是一个什么样的方法？run方法与start方法有什么关联？
+	run()方法当作普通方法的方式调用；
+	run()其实是一个普通方法，只不过当线程调用了start( )方法后，一旦线程被CPU调度，处于运行状态，那么线程才会去调用这个run（）方法；
 
 结论：start方法是用于启动线程的，可以实现并发（两个线程分别执行自己的程序），而run方法只是一个普通方法，是不能实现并发的，只是在并发执行的时候会调用（两个线程，先后执行完）。
 
 
-
-44.创建线程池有哪几种方式？
+44.创建线程池有哪几种方式？ 【可以理解为线程池就是一个初始化好的数组，需要数字时不需要new了，从池中获取会更快，也不会频繁的创建销毁】
 
 【线程池的使用：
+        我们有两种常见的创建线程的方法，一种是继承Thread类，一种是实现Runnable的接口，Thread类其实也是实现了Runnable接口。
+	但是我们创建这两种线程在运行结束后都会被虚拟机销毁，如果线程数量多的话，频繁的创建和销毁线程会大大浪费时间和效率，更重要的是浪费内存，因为正常来说线程执行完毕后死亡，线程对象变成垃圾！那么有没有一种方法能让线程运行完后不立即销毁，而是让线程重复使用，继续执行其他的任务哪？我们使用线程池就能很好地解决这个问题。】
 
-        我们有两种常见的创建线程的方法，一种是继承Thread类，一种是实现Runnable的接口，Thread类其实也是实现了Runnable接口。但是我们创建这两种线程在运行结束后都会被虚拟机销毁，如果线程数量多的话，频繁的创建和销毁线程会大大浪费时间和效率，更重要的是浪费内存，因为正常来说线程执行完毕后死亡，线程对象变成垃圾！那么有没有一种方法能让线程运行完后不立即销毁，而是让线程重复使用，继续执行其他的任务哪？我们使用线程池就能很好地解决这个问题。】
-
-【1. 线程池的概念：（即 要使用线程时不需要创建线程了，而是将任务传给线程池）
-
-          线程池就是首先创建一些线程，它们的集合称为线程池。使用线程池可以很好地提高性能，线程池在系统启动时即创建大量空闲的线程，程序将一个任务传给线程池，线程池就会启动一条线程来执行这个任务，执行结束以后，该线程并不会死亡，而是再次返回线程池中成为空闲状态，等待执行下一个任务。
+【 1. 线程池的概念：（即 要使用线程时不需要创建线程了，而是将任务传给线程池）
+     线程池就是首先创建一些线程，它们的 集合 称为线程池。使用线程池可以很好地提高性能，线程池在系统启动时即创建大量空闲的线程，程序将一个任务传给线程池，线程池就会启动一条线程来执行这个任务，执行结束以后，该线程并不会死亡，而是再次返回线程池中成为空闲状态，等待执行下一个任务。
 
    2. 线程池的工作机制
-
          2.1 在线程池的编程模式下，任务是提交给整个线程池，而不是直接提交给某个线程，线程池在拿到任务后，就在内部寻找是否有空闲的线程，如果有，则将任务交给某个空闲的线程。
-
          2.1 一个线程同时只能执行一个任务，但可以同时向一个线程池提交多个任务。
 
    3. 使用线程池的原因：
-
         多线程运行时间，系统不断的启动和关闭新线程，成本非常高，会过渡消耗系统资源，以及过渡切换线程的危险，从而可能导致系统资源的崩溃。这时，线程池就是最好的选择了。】
-
 
 
 线程池创建有七种方式，最核心的是最后一种：
 
-newSingleThreadExecutor()：它的特点在于工作线程数目被限制为 1，操作一个无界的工作队列，所以它保证了所有任务的都是被顺序执行，最多会有一个任务处于活动状态，并且不允许使用者改动线程池实例，因此可以避免其改变线程数目；
-......
-newWorkStealingPool(int parallelism)：这是一个经常被人忽略的线程池，Java 8 才加入这个创建方法，其内部会构建ForkJoinPool，利用Work-Stealing算法，并行地处理任务，不保证处理顺序；
-
-ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都是对ThreadPoolExecutor的封装。
-
+    newSingleThreadExecutor()：它的特点在于工作线程数目被限制为 1，操作一个无界的工作队列，所以它保证了所有任务的都是被顺序执行，最多会有一个任务处于活动状态，并且不允许使用者改动线程池实例，因此可以避免其改变线程数目；
+    ......
+    newWorkStealingPool(int parallelism)：这是一个经常被人忽略的线程池，Java 8 才加入这个创建方法，其内部会构建ForkJoinPool，利用Work-Stealing算法，并行地处理任务，不保证处理顺序；
+    ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都是对ThreadPoolExecutor的封装。
 
 
 45.线程池都有哪些状态？【待续2】
@@ -732,21 +745,17 @@ ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都
 
 
 
-
 47.在 java 程序中怎么保证多线程的运行安全？
 
-【线程安全问题都是由全局变量及静态变量引起的。若每个线程中对全局变量、静态变量只有读操作，而无写操作，一般来说，这个全局变量是线程安全的；若有多个线程同时执行写操作，一般都需要考虑线程同步，否则的话就可能影响线程安全。】
+【线程安全问题 都是由全局变量及静态变量引起的。若每个线程中对全局变量、静态变量只有读操作，而无写操作，一般来说，这个全局变量是线程安全的；若有多个线程同时执行写操作，一般都需要考虑线程同步，否则的话就可能影响线程安全。】
 
  (1)  使用安全类，如 Java. util. concurrent 下的类。
-
  (2)  使用 自动锁 synchronized。
-
  (3)  使用手动锁 Lock。
 
 手动锁 Java 示例代码如下：
-
     Lock lock = new ReentrantLock();
-    lock. lock();
+    lock. lock();  //还有tryLock() 区别是lock会等待，tryLock可以设置等待时，过时就停止
     try {
        System. out. println("获得锁");
     } catch (Exception e) {
@@ -755,16 +764,16 @@ ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都
        System. out. println("释放锁");
        lock. unlock();
     }
+    
 自动锁 synchronized示例代码：
 
-当两个并发线程(thread1和thread2)访问同一个对象(syncThread)中的synchronized代码块时，在同一时刻只能有一个线程得到执行，另一个线程受阻塞，必须等待当前线程执行完这个代码块以后才能执行该代码块。Thread1和thread2是互斥的，因为在执行synchronized代码块时会锁定当前的对象，只有执行完该代码块才能释放该对象锁，下一个线程才能执行并锁定该对象。为什么上面的例子中thread1和thread2同时在执行。这是因为synchronized只锁定对象，每个对象只有一个锁（lock）与之相关联。
+    当两个并发线程(thread1和thread2)访问同一个对象(syncThread)中的synchronized代码块时，在同一时刻只能有一个线程得到执行，另一个线程受阻塞，必须等待当前线程执行完这个代码块以后才能执行该代码块。
+    Thread1和thread2是互斥的，因为在执行synchronized代码块时会锁定当前的对象，只有执行完该代码块才能释放该对象锁，下一个线程才能执行并锁定该对象。为什么上面的例子中thread1和thread2同时在执行。这是因为synchronized只锁定对象，每个对象只有一个锁（lock）与之相关联。
 
 总结：
-
-A. 无论synchronized关键字加在 方法上还是对象上，如果它作用的对象是 非静态 的，则它取得的锁是 对象（根据对象作为锁）；如果synchronized作用的对象是一个 静态方法或一个类，则它取得的锁 是对类 (类作为锁)，该类所有的对象同一把锁。 
-B. 每个对象只有一个锁（lock）与之相关联，谁拿到这个锁谁就可以运行它所控制的那段代码。 
-C. 实现同步是要很大的系统开销作为代价的，甚至可能造成死锁，所以尽量避免无谓的同步控制。
-
+    A. 无论synchronized关键字加在 方法上还是对象上，如果它作用的对象是 非静态 的，则它取得的锁是 对象（根据对象作为锁）；如果synchronized作用的对象是一个 静态方法或一个类，则它取得的锁 是对类 (类作为锁)，该类所有的对象同一把锁。 
+    B. 每个对象只有一个锁（lock）与之相关联，谁拿到这个锁谁就可以运行它所控制的那段代码。 
+    C. 实现同步是要很大的系统开销作为代价的，甚至可能造成死锁，所以尽量避免无谓的同步控制。
 
 
 48.多线程锁的升级原理是什么？
@@ -772,25 +781,19 @@ C. 实现同步是要很大的系统开销作为代价的，甚至可能造成�
 
 
 49.什么是死锁？
-
 【两个线程互相等待对方释放锁的情况，就叫死锁】
-
 当线程A持有独占锁a，并尝试取获取独占锁b的同时，线程B持有独占锁b，并尝试获取独占锁a的情况下，就会发生AB两个线程由于互相持有对方需要的锁，而发生的阻塞现象，称为死锁。
-
 
 
 50.怎么防止死锁？
 
 【谨慎用锁，手动释放锁】
-
  (1) 尽量使用tryLock(Long timeout，TimeUnit unit)的方法，设置超时时间，超时可以退出 防止死锁。
+ 【tryLock() 区别是 Lock会一直等待，tryLock可以设置等待时，过时就停止】
 
  (2) 尽量使用 Java.util.concurrent 包下的并发类 代替自己手写锁。
-
  (3) 尽量降低锁的使用粒度，不要几个功能 用 同一把锁。
-
  (4) 尽量减少同步的代码块。
-
 
 
 51.ThreadLocal 是什么？有哪些使用场景？
@@ -801,10 +804,8 @@ C. 实现同步是要很大的系统开销作为代价的，甚至可能造成�
 
 54.synchronized 和 Lock 有什么区别？
 
-【synchronized 可以用在 类、对象、方法、代码块；
-
+【 synchronized 可以用在 类、对象、方法、代码块；
    Lock只能用在代码块上；需要手动释放】
-
 
 
 55.synchronized 和 ReentrantLock 区别是什么？
@@ -816,26 +817,23 @@ C. 实现同步是要很大的系统开销作为代价的，甚至可能造成�
 四、反射
 
 57.什么是反射？
-
+【java动态代理 和 cgLibe】
 
 
 58.什么是 java 序列化？什么情况下需要序列化？
 
-【Java序列化是 内存中的对象数据的状态能够被读取出来】
+【Java序列化是内存中 对象数据的状态能够被读取出来】
 
 Java序列化是 为了 保存 各种对象在内存中 的状态，并且可以把 保存的对象状态 再读取出来。
 
 以下情况需要使用Java序列化：
-
-1.想把 内存中的对象状态 保存到 一个文件中 或者数据库中的时候；
-
-2.想用套接字 在网络上传送 对象的时候；
-
-3.想通过RMI（远程方法调用） 传输 对象的时候。
-
+	1.想把 内存中的对象状态 保存到 一个文件中 或者数据库中的时候；
+	2.想用套接字 在网络上传送 对象的时候；
+	3.想通过RMI（远程方法调用） 传输 对象的时候。
 
 
 59.动态代理是什么？有哪些应用？
+
 
 60.怎么实现动态代理？
 
