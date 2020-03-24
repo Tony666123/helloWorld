@@ -321,7 +321,7 @@ https://cloud.tencent.com/developer/article/1361248
 
 https://mp.weixin.qq.com/s?__biz=MzU1MDE4MzUxNA==&mid=2247483679&idx=1&sn=4a51847fb40fafe418bca0b906a03e0a&chksm=fba5362accd2bf3cba68324072863e93a354e65ecb1bdfb9f7dbd857af41f553b72d46b2cb36&scene=21#wechat_redirect
 
-【 HashMap是由数组+链表组成。 hash冲突多时会用红黑树，少时会用单链表。 Hash函数代表着一类函数。】
+【 HashMap是由数组+链表/红黑树组成。 hash冲突多时会用红黑树，少时会用单链表。 Hash函数代表着一类函数。】
 【** 什么时候用到红黑树：https://www.cnblogs.com/mzc-blogs/p/5800084.html
 	3. put函数的实现
 		put函数大致的思路为：
@@ -651,12 +651,11 @@ public class CallableThreadTest implements Callable<Integer> {
   runnable 没有返回值，callable 可以拿到有返回值，callable 可以看作是 runnable 的补充。
 
 
-
 40.线程有哪些状态？
 
 【线程状态有5种：初始、准备，运行、阻塞(等待阻塞、同步阻塞、其他阻塞)、死亡】 
 【https://blog.csdn.net/xingjing1226/article/details/81977129 线程的5种状态详解（**有线程的状态图 和 与等待队列相关的步骤和图）
-参考如下：https://blog.csdn.net/wuxing26jiayou/article/details/76647961
+参考如下：https://blog.csdn.net/wuxing26jiayou/article/details/76647961 进程和线程区别详解
 
 线程和进程一样分为五个阶段：创建 New 、就绪 Runnable (start())、运行 Running 、阻塞 Blocked 、终止 Terminated ；
 线程有3个基本状态：执行、就绪、阻塞;
@@ -673,6 +672,9 @@ TIMED_WAITING 等待指定的时间重新被唤醒的状态
 TERMINATED 执行完成
 
 
+【sleep(Thread使用，让当前线程睡眠)、wait(对象锁使用，让当前拥有锁的线程放弃锁)；
+  notify、notifyAll 都是对象锁来调用的，(随机/全部)唤醒等待它（对象锁）的线程】
+
 41.sleep() 和 wait() 有什么区别？
 
   (1) 哪个类：sleep 来自Thread类， wait 是来自Object。
@@ -683,7 +685,7 @@ TERMINATED 执行完成
 
 42.notify()和 notifyAll()有什么区别？
 
-【notify 唤醒单个线程，notifyAll唤醒所有线程】
+【notify 唤醒单个线程，notifyAll唤醒所有线程 --- 对象锁来调用的该方法，(随机)唤醒等待他的线程】
   notifyAll()会唤醒所有的线程（唤醒所有在等待该对象锁的线程），notify()之后唤醒一个线程（唤醒哪个是随机的）。
 
 obj.wait()，当前线程调用对象的wait()方法，当前线程释放对象锁，进入等待队列。
@@ -711,7 +713,7 @@ Example2：
 结论：start方法是用于启动线程的，可以实现并发（两个线程分别执行自己的程序），而run方法只是一个普通方法，是不能实现并发的，只是在并发执行的时候会调用（两个线程，先后执行完）。
 
 
-44.创建线程池有哪几种方式？ 【可以理解为线程池就是一个初始化好的数组，需要数字时不需要new了，从池中获取会更快，也不会频繁的创建销毁】
+44.创建线程池有哪几种方式？ 【可以理解为线程池就是一个初始化好的对象数组，需要对象时不需要new了，从池中获取会更快，也不会频繁的创建销毁】
 
 【线程池的使用：
         我们有两种常见的创建线程的方法，一种是继承Thread类，一种是实现Runnable的接口，Thread类其实也是实现了Runnable接口。
@@ -729,33 +731,76 @@ Example2：
 
 
 线程池创建有七种方式，最核心的是最后一种：
-
     newSingleThreadExecutor()：它的特点在于工作线程数目被限制为 1，操作一个无界的工作队列，所以它保证了所有任务的都是被顺序执行，最多会有一个任务处于活动状态，并且不允许使用者改动线程池实例，因此可以避免其改变线程数目；
     ......
     newWorkStealingPool(int parallelism)：这是一个经常被人忽略的线程池，Java 8 才加入这个创建方法，其内部会构建ForkJoinPool，利用Work-Stealing算法，并行地处理任务，不保证处理顺序；
     ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都是对ThreadPoolExecutor的封装。
 
 
-45.线程池都有哪些状态？【待续2】
+45.线程池都有哪些状态？【待续深究2】
+【可接受新任务 也可运行任务，不接受新任务但可运行已有任务，不接受任务也不运行任务】
+【RUNNING 可接受新任务 并 运行等待队列的任务；
+  SHUTDOWN 不接受新任务但会继续处理等待队列中的任务（运行已有任务）；
+  STOP 不接受新任务，也不再处理等待队列中的任务，中断正在执行任务的线程；
+  tidying 所有的任务都销毁了，workCount 为 0，线程池的状态在转换为 TIDYING 状态时，会执行钩子方法 terminated()；
+  TERMINATED：terminated()方法结束后，线程池的状态就会变成这个。】
 
 
+46.线程池中 submit() 和 execute()方法有什么区别？
+【参考 ： https://blog.csdn.net/qq_38974634/article/details/81315900 创建多线程的4种方式】
 
-46.线程池中 submit()和 execute()方法有什么区别？【待续3】
+【submit(Callnable/Runnable)的参数可以是Callnable和Runnable，而 execute(runnable)只有runnable】
 
+execute()：只能执行 Runnable 类型的任务。
+submit()：可以执行 Runnable 和 Callable 类型的任务。
 
+Callable 类型的任务可以获取执行的返回值，而 Runnable 执行无返回值。
+
+线程池使用：
+public class TestThreadPool {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        //声明线程池大小 (类似于 声明数组)
+        ExecutorService threadPoolExecutorService = Executors.newFixedThreadPool(5);
+
+        //装载 多个线程，方便打印出来
+        List<Future<List<Integer>>> submitLists = new LinkedList<>();
+
+        // 调用线程池threadPoolExecutorService通过submit方法添加线程，这里循环5次添加5个线程任务
+        // threadPoolExecutorService.submit返回的 为一条线程，这里装5条线程（submit）到list容器中
+        for (int i = 0; i < 5; i++) {
+            Future<List<Integer>> submit = threadPoolExecutorService.submit(new Callable<List<Integer>>() {
+                @Override
+                public List<Integer> call() throws Exception {
+                    System.out.println(Thread.currentThread().getName() + "  ");
+                    List<Integer> lists = new LinkedList<>();
+                    for (int i = 0; i < 5; i++) {
+                        lists.add(i);
+                    }
+                    return lists;
+                }
+            });
+            submitLists.add(submit);
+        }
+
+        for (Future<List<Integer>> future : submitLists) {
+            System.out.println(future.get());
+        }    
+    }
+}
 
 
 47.在 java 程序中怎么保证多线程的运行安全？
 
 【线程安全问题 都是由全局变量及静态变量引起的。若每个线程中对全局变量、静态变量只有读操作，而无写操作，一般来说，这个全局变量是线程安全的；若有多个线程同时执行写操作，一般都需要考虑线程同步，否则的话就可能影响线程安全。】
 
- (1)  使用安全类，如 Java. util. concurrent 下的类。
+ (1)  使用安全类，如 Java.util.concurrent 下的类。
  (2)  使用 自动锁 synchronized。
  (3)  使用手动锁 Lock。
 
 手动锁 Java 示例代码如下：
     Lock lock = new ReentrantLock();
-    lock. lock();  //还有tryLock() 区别是lock会等待，tryLock可以设置等待时，过时就停止
+    lock. lock();  //还有tryLock() 区别是当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止
     try {
        System. out. println("获得锁");
     } catch (Exception e) {
@@ -765,13 +810,15 @@ Example2：
        lock. unlock();
     }
     
+    
 自动锁 synchronized示例代码：
 
     当两个并发线程(thread1和thread2)访问同一个对象(syncThread)中的synchronized代码块时，在同一时刻只能有一个线程得到执行，另一个线程受阻塞，必须等待当前线程执行完这个代码块以后才能执行该代码块。
     Thread1和thread2是互斥的，因为在执行synchronized代码块时会锁定当前的对象，只有执行完该代码块才能释放该对象锁，下一个线程才能执行并锁定该对象。为什么上面的例子中thread1和thread2同时在执行。这是因为synchronized只锁定对象，每个对象只有一个锁（lock）与之相关联。
 
 总结：
-    A. 无论synchronized关键字加在 方法上还是对象上，如果它作用的对象是 非静态 的，则它取得的锁是 对象（根据对象作为锁）；如果synchronized作用的对象是一个 静态方法或一个类，则它取得的锁 是对类 (类作为锁)，该类所有的对象同一把锁。 
+    A. 无论synchronized关键字加在 方法上还是对象上，如果它作用的对象是 非静态 的，则它取得的锁是 对象（根据对象作为锁）；
+       如果synchronized作用的对象是一个 静态方法或一个类，则它取得的锁 是对类 (类作为锁)，该类所有的对象同一把锁。 
     B. 每个对象只有一个锁（lock）与之相关联，谁拿到这个锁谁就可以运行它所控制的那段代码。 
     C. 实现同步是要很大的系统开销作为代价的，甚至可能造成死锁，所以尽量避免无谓的同步控制。
 
@@ -789,8 +836,7 @@ Example2：
 
 【谨慎用锁，手动释放锁】
  (1) 尽量使用tryLock(Long timeout，TimeUnit unit)的方法，设置超时时间，超时可以退出 防止死锁。
- 【tryLock() 区别是 Lock会一直等待，tryLock可以设置等待时，过时就停止】
-
+ 	【tryLock() 区别是 Lock会一直等待，tryLock可以设置等待时，过时就停止】
  (2) 尽量使用 Java.util.concurrent 包下的并发类 代替自己手写锁。
  (3) 尽量降低锁的使用粒度，不要几个功能 用 同一把锁。
  (4) 尽量减少同步的代码块。
@@ -799,14 +845,49 @@ Example2：
 51.ThreadLocal 是什么？有哪些使用场景？
 
 52.说一下 synchronized 底层实现原理？
+   【monitorenter 和 monitorexit】
 
 53.synchronized 和 volatile 的区别是什么？
 
+
 54.synchronized 和 Lock 有什么区别？
-
 【 synchronized 可以用在 类、对象、方法、代码块；
-   Lock只能用在代码块上；需要手动释放】
+   Lock只能用在代码块上；需要手动释放；tryLock() 区别是当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止】
+   
+synchronized底层原理 Java面试热点：synchronized原理剖析与优化 ：https://www.bilibili.com/video/BV1JJ411J7Ym?p=13 
 
+synchronized的使用：
+	public class TestSynDemo {
+
+	    private static Object obj = new Object();
+
+	    // 1.synchronized 锁方法
+	    public synchronized void test(){
+		System.out.println("object == ");
+	    }
+
+	    // 2. synchronized 锁对象
+	    public void testOne(){
+		synchronized (obj) {
+		    System.out.println("object == ");
+		}
+	    }
+
+	    // 3. synchronized修饰代码块
+	    public void testTwo(){
+		synchronized (this) {
+		    System.out.println("object == ");
+		}
+	    }
+	    
+	    // 4. synchronized 锁 类.class
+	    public void testThree(){
+		synchronized (TestSynDemo.class) {
+		    System.out.println("object == ");
+		}
+	    }
+	}
+    
 
 55.synchronized 和 ReentrantLock 区别是什么？
 
@@ -817,7 +898,7 @@ Example2：
 四、反射
 
 57.什么是反射？
-【java动态代理 和 cgLibe】
+【JDK原生动态代理（java动态代理） 和 cgLib动态代理】
 
 
 58.什么是 java 序列化？什么情况下需要序列化？
@@ -846,6 +927,7 @@ Java序列化是 为了 保存 各种对象在内存中 的状态，并且可�
 62.如何实现对象克隆？
 
 63.深拷贝和浅拷贝区别是什么？
+
 
 六、Java Web
 
