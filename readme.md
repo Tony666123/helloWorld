@@ -736,6 +736,7 @@ Example2：
     newWorkStealingPool(int parallelism)：这是一个经常被人忽略的线程池，Java 8 才加入这个创建方法，其内部会构建ForkJoinPool，利用Work-Stealing算法，并行地处理任务，不保证处理顺序；
     ThreadPoolExecutor()：是最原始的线程池创建，上面1-3创建方式都是对ThreadPoolExecutor的封装。
 
+使用代码如下。
 
 45.线程池都有哪些状态？【待续深究2】
 【可接受新任务 也可运行任务，不接受新任务但可运行已有任务，不接受任务也不运行任务】
@@ -843,9 +844,98 @@ public class TestThreadPool {
 
 
 51.ThreadLocal 是什么？有哪些使用场景？
+	ThreadLocal 为每个使用该变量的线程提供独立的变量副本，所以每一个线程都可以独立地改变自己的副本，而不会影响其它线程所对应的副本。
+	ThreadLocal 的经典使用场景是数据库连接和 session 管理等。
+
+使用：
+public class MonitorUtil {
+    private static ThreadLocal<Long> tl = new ThreadLocal<>();
+
+    public static void start() {
+        tl.set(System.currentTimeMillis());
+    }
+
+    //结束时打印耗时
+    public static void finish(String methodName) {
+        long finishTime = System.currentTimeMillis();
+        System.out.println(methodName + "方法耗时" + (finishTime - tl.get()) + "ms");
+    }
+}
+
+1.ThreadLocal 是什么？
+  【参考：https://www.jianshu.com/p/6fc3bba12f38 ThreadLocal作用、场景、原理】
+    在JDK 1.2的版本中就提供java.lang.ThreadLocal，ThreadLocal为解决多线程程序的并发问题提供了一种新的思路。使用这个工具类可以很简洁地编写出优美的多线程程序。
+    ThreadLocal并不是一个Thread，而是Thread的局部变量，也许把它命名为ThreadLocalVariable更容易让人理解一些。
+    在JDK5.0中，ThreadLocal已经支持泛型，该类的类名已经变为ThreadLocal<T>。API方法也相应进行了调整，新版本的API方法分别是void set(T value)、T get()以及T initialValue()。
+	
+    1.1.ThreadLocal 的作用？
+    	ThreadLocal是解决线程安全问题一个很好的思路，它通过为 每个线程 提供一个独立的变量副本 解决了 变量并发访问的冲突问题。在很多情况下，ThreadLocal比直接使用synchronized同步机制解决线程安全问题更简单，更方便，且结果程序拥有更高的并发性。
+
+    1.1.2.ThreadLocal的应用场景？
+    	在Java的多线程编程中，为保证多个线程对共享变量的安全访问，通常会使用synchronized来保证同一时刻只有一个线程对共享变量进行操作。这种情况下可以将类变量放到ThreadLocal类型的对象中，使变量在每个线程中都有独立拷贝，不会出现一个线程读取变量时而被另一个线程修改的现象。最常见的ThreadLocal使用场景为用来解决数据库连接、Session管理等。在下面会例举几个场景。
+	经典的使用场景是为每个线程分配一个 JDBC 连接 Connection。这样就可以保证每个线程的都在各自的 Connection 上进行数据库的操作，不会出现 A 线程关了 B线程正在使用的 Connection； 还有 Session 管理 等问题。
+    
+    ThreadLocal类中提供了几个方法：
+	 T get()方法是用来获取ThreadLocal在当前线程中保存的变量副本，
+	 void set()用来设置当前线程中变量的副本，
+	 void remove()用来移除当前线程中变量的副本，
+	 T initialValue()是一个protected方法，一般是用来在使用时进行重写的，它是一个延迟加载方法，下面会详细说明。
+
+**描述： Java中的ThreadLocal类允许我们创建只能被 同一个线程 读写的变量。
+ * 因此，如果一段代码含有一个ThreadLocal变量的引用，即使两个线程同时执行这段代码，
+ * 它们也无法访问到对方的ThreadLocal变量。
+
+使用案例：
+public class ThreadLocalExsample {
+
+	public static class MyRunnable implements Runnable {	
+		/**
+		 * 例化了一个ThreadLocal对象。我们只需要实例化对象一次，并且也不需要知道它是被哪个线程实例化。
+		 * 虽然所有的线程都能访问到这个ThreadLocal实例，但是每个线程却只能访问到自己通过调用ThreadLocal的
+		 * set()方法设置的值。即使是两个不同的线程在同一个ThreadLocal对象上设置了不同的值，
+		 * 他们仍然无法访问到对方的值。
+		 */	 
+		 private ThreadLocal threadLocal = new ThreadLocal();
+
+		 @Override
+		 public void run() {
+			 //一旦创建了一个ThreadLocal变量，你可以通过如下代码设置某个需要保存的值
+			 threadLocal.set((int) (Math.random() * 100D));
+			 try {
+				Thread.sleep(2000);
+			 } catch (InterruptedException e) {  }
+			 //可以通过下面方法读取保存在ThreadLocal变量中的值
+			 System.out.println("-------threadLocal value-------"+threadLocal.get());
+		 }
+	 }
+	​
+	 public static void main(String[] args) {
+		 MyRunnable sharedRunnableInstance = new MyRunnable();
+		 Thread thread1 = new Thread(sharedRunnableInstance);
+		 Thread thread2 = new Thread(sharedRunnableInstance);
+		 thread1.start();
+		 thread2.start();
+	 }
+}
+运行结果
+-------threadLocal value-------38
+-------threadLocal value-------88
+
+    结论: ThreadLocal 中 set 和 get 操作的都是对应线程的 table数组，因此在不同的线程中访问同一个 ThreadLocal 对象的 set 和 get 进行存取数据是不会相互干扰的。
+
+
+【参考：https://blog.csdn.net/meism5/article/details/90413860 ThreadLocal 是什么？有哪些使用场景？】
+    在线程池中使用 ThreadLocal 为什么可能导致内存泄露呢？
+	在线程池中线程的存活时间太长，往往都是和程序同生共死的，这样 Thread 持有的 ThreadLocalMap 一直都不会被回收，再加上 ThreadLocalMap 中的 Entry 对 ThreadLocal 是弱引用（WeakReference），所以只要 ThreadLocal 结束了自己的生命周期是可以被回收掉的。
+	Entry 中的 Value 是被 Entry 强引用的，即便 value 的生命周期结束了，value 也是无法被回收的，导致内存泄露。
+
+    线程池中，如何正确使用 ThreadLocal？
+	在 finally 代码块中手动清理 ThreadLocal 中的 value，调用 ThreadLocal 的 remove()方法。
+
 
 52.说一下 synchronized 底层实现原理？
    【monitorenter 和 monitorexit】
+
 
 53.synchronized 和 volatile 的区别是什么？
 
@@ -899,11 +989,12 @@ synchronized的使用：
 
 57.什么是反射？
 【JDK原生动态代理（java动态代理） 和 cgLib动态代理】
+	反射 是在Java运行状态中，对于任意一个类，都能够知道这个类的属性和方法；对于一个对象，都能够调用它的任意一个方法和属性，这种动态获取的信息 以及 动态调用对象的方法 的功能 称为Java语言的反射机制。
 
 
 58.什么是 java 序列化？什么情况下需要序列化？
 
-【Java序列化是内存中 对象数据的状态能够被读取出来】
+【Java序列化是内存中 对象 数据的状态 能够被读取出来】
 
 Java序列化是 为了 保存 各种对象在内存中 的状态，并且可以把 保存的对象状态 再读取出来。
 
@@ -914,10 +1005,55 @@ Java序列化是 为了 保存 各种对象在内存中 的状态，并且可�
 
 
 59.动态代理是什么？有哪些应用？
-
+ 动态代理运行时 动态生成的 代理类。
+ 
 
 60.怎么实现动态代理？
 
+JDK 原生动态代理和 cglib 动态代理。JDK 原生动态代理是基于接口实现的，而 cglib 是基于继承当前类的子类实现的。
+【 1.动态代理：代理类在程序运行时创建的代理方式被成为动态代理。 
+   代理模式上讲的(包括我们上面)是静态代理的例子中，代理类(studentProxy)是自己定义好的，在程序运行之前就已经编译完成。
+   然而动态代理，代理类并不是在Java代码中定义的，而是在运行时根据我们在Java代码中的“指示”动态生成的。
+   相比于静态代理，动态代理的优势在于可以很方便的对代理类的函数进行统一的处理，而不用修改每个代理类中的方法。】
+
+参考：https://www.cnblogs.com/gonjan-blog/p/6685611.html java动态代理实现与原理详细分析
+使用JDK动态代理：
+	创建StuInvocationHandler类（代理类），实现InvocationHandler接口，这个类中持有一个被代理对象的实例target。
+	InvocationHandler中有一个invoke方法，所有执行代理对象的方法都会被替换成执行invoke方法。再在invoke方法中执行被代理对象target的相应方法。
+	
+	当然，在代理过程中，我们在真正执行被代理对象的方法前加入自己其他处理。
+	这也是Spring中的AOP实现的主要原理，这里还涉及到一个很重要的关于java反射方面的基础知识。
+
+ public class ProxyTest {
+    public static void main(String[] args) {
+        
+        //创建一个实例对象，这个对象是被代理的对象（真实对象）
+        Person zhangsan = new Student("张三");
+        
+        //创建一个与代理对象相关联的InvocationHandler
+        InvocationHandler stuHandler = new StuInvocationHandler<Person>(zhangsan);
+        
+        //创建一个代理对象stuProxy来代理zhangsan，代理对象的每个执行方法都会替换执行Invocation中的invoke方法
+        Person stuProxy = (Person) Proxy.newProxyInstance(Person.class.getClassLoader(), new Class<?>[]{Person.class}, stuHandler)；
+
+       //代理执行上交班费的方法
+        stuProxy.giveMoney();
+    }
+}
+	我们创建了一个需要被代理的Person学生张三（真实对象），将zhangsan对象传给了stuHandler（自定义InvocationHadle，关联了Person真实对象）中，
+	我们在创建代理对象stuProxy时，将stuHandler作为参数了的，上面也有说到所有执行代理对象的方法都会被替换成执行invoke方法，
+	也就是说，最后执行的是StuInvocationHandler中的invoke方法。
+	所以在看到下面的运行结果也就理所当然了。
+	
+**上面说到，动态代理的优势在于可以 很方便的对 代理类的函数 进行统一的处理，而不用修改每个代理类中的方法。是因为所有被代理执行的方法，都是通过在InvocationHandler中的invoke方法调用的，所以我们只要在invoke方法中统一处理，就可以对所有被代理的方法进行相同的操作了。
+  例如，这里的方法计时，所有的被代理对象执行的方法都会被计时，然而我只做了很少的代码量。
+  即，如果一个真实类就写一个代理类，第一多个真是类就会有很多代理类；第二是一个真是类中如果有多个方法需要计时(加强)，则代理类重写的每个方法都要写加强，耗时耗力。而使用InvocationHandler只需要一个，这就是动态代理。
+
+  我们可以对InvocationHandler看做一个中介类，中介类持有一个被代理对象，在invoke方法中调用了被代理对象的相应方法。通过聚合方式持有被代理对象的引用，把外部对invoke的调用最终都转为对被代理对象的调用。
+  代理类调用自己方法时，通过自身持有的中介类对象来调用中介类对象的invoke方法，从而达到代理执行被代理对象的方法。也就是说，动态代理通过中介类实现了具体的代理功能。
+  五、总结
+	生成的代理类：$Proxy0 extends Proxy implements Person，我们看到代理类(stuProxy)继承了Proxy类，所以也就决定了java动态代理只能对接口进行代理，Java的继承机制注定了这些动态代理类们无法实现对class的动态代理。
+	上面的动态代理的例子，其实就是AOP的一个简单实现了，在目标对象的方法执行之前和执行之后进行了处理，对方法耗时统计。Spring的AOP实现其实也是用了Proxy和InvocationHandler这两个东西的。
 
 
 五、对象拷贝
@@ -988,20 +1124,15 @@ throw是真实抛出一个异常（代码中用）、throws是声明可能抛出
 
 75.final、finally、finalize 有什么区别？
 
-【final 是修饰符，修饰类、方法、变量；被final修饰的类不能被继承、方法不能被重写/修改、变量不能修改；
-
+【 final 是修饰符，修饰类、方法、变量；被final修饰的类不能被继承、方法不能被重写/修改、变量不能修改；
    finally 是 try-catch-finally 最后一部分，可以省略，若存在，finall一定会执行，即使try中有return了，还是会执行finally再返回；
-
-   finalized(定案、终结) 是 Object 类的一个方法，垃圾回收器执行时会调用 被回收对象的该方法】
-
+   finalized(定案、终结) 是 Object 类的一个方法，垃圾回收器执行时会调用 被回收对象的该方法 】
 
 
 76.try-catch-finally 中哪个部分可以省略？
 
 【finally可以省略；】
-
 try-catch-finally 其中catch 或 finally 都可以省略，但是不能同时省略，也就是说有try的时候，后面必须有一个catch或finally。
-
 
 
 77.try-catch-finally 中，如果 catch 中 return 了，finally 还会执行吗？
@@ -1009,9 +1140,7 @@ try-catch-finally 其中catch 或 finally 都可以省略，但是不能同时�
 【会，finally完再return】finally 一定会执行，即使是 catch 中 return 了，catch 中的 return 会等 finally 中的代码执行完之后，才会执行。
 
 
-
 78.常见的异常类有哪些？
-
 NullPointException、IOException、ClassCastException 类转换异常、NoSuchMethodException 方法不存在异常
 
 
@@ -1022,12 +1151,10 @@ NullPointException、IOException、ClassCastException 类转换异常、NoSuchMe
 
 80.forward 和 redirect 的区别？
 
-【forward 转发，参数会携带(可以共享 request 里的数据)，url地址栏不会发生改变；redirect 重定向，参数不会携带(不能共享)，url地址栏会改变】
+【 forward 转发，参数会携带(可以共享 request 里的数据)，url地址栏不会发生改变； redirect 重定向，参数不会携带(不能共享)，url地址栏会改变 】
 
  (1) 地址栏Url：forward 转发 地址栏 不会发生改变，redirect 重定向会改变；
-
  (2) request 数据共享：forward 可以共享 request的数据，redirect不能；
-
  (3) 效率：forward的效率要 比 redirect高。
 
 
@@ -1038,17 +1165,15 @@ NullPointException、IOException、ClassCastException 类转换异常、NoSuchMe
 
 82.tcp 为什么要三次握手，两次不行吗？为什么？【TCP建立连接为什么是三次握手？】
 
-【TCP的三次握手(建立连接)，四次分手(断开连接)分别是什么意思？
-
+【 TCP的三次握手(建立连接)，四次分手(断开连接)分别是什么意思？
    参考：通俗大白话来理解TCP协议的三次握手和四次分手 (https://github.com/jawil/blog/issues/14)
 
-   三次握手不是TCP本身的要求, 而是为了满足"在不可靠信道上可靠地传输信息"这一需求所导致的。
-
+   **三次握手不是TCP本身的要求, 而是为了满足"在不可靠信道上可靠地传输信息"这一需求所导致的。
    进行三次握手来保证连接是双工的。】
 
-【三次握手： 1.客户端 --> 建立连接好吗？ 2. 服务器 --> 同意，可以  3.客户端 --> 好的，建立连接 ；完成。 
-
-   四次分手： 1.客户端 --> 要断开连接！？ 2. 服务器 --> 同意，可以  3.客户端 --> 好的，断开连接 。4.服务器 --> 等待确认，断开连接。 参考：https://www.cnblogs.com/yuilin/archive/2012/11/05/2755298.html#!comments 】
+【 三次握手： 1.客户端 --> 建立连接好吗？ 2. 服务器 --> 同意，可以  3.客户端 --> 好的，建立连接 ；完成。 
+   四次分手： 1.客户端 --> 要断开连接！？ 2. 服务器 --> 同意，可以  3.客户端 --> 好的，断开连接 。4.服务器 --> 等待确认，断开连接。
+   参考：https://www.cnblogs.com/yuilin/archive/2012/11/05/2755298.html#!comments 】
 
 
 
@@ -1063,9 +1188,6 @@ NullPointException、IOException、ClassCastException 类转换异常、NoSuchMe
 OSI七层模式简单通俗理解：https://blog.csdn.net/xzongyuan/article/details/10371331
 
 掘金参考：https://juejin.im/post/59eb06b1f265da430f313c7f
-
-
-
 
 
 物理层：利用传输介质为数据链路层提供物理连接，实现比特流的透明传输。
