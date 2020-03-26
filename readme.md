@@ -1010,14 +1010,16 @@ Java序列化是 为了 保存 各种对象在内存中 的状态，并且可�
 
 60.怎么实现动态代理？
 
-JDK 原生动态代理和 cglib 动态代理。JDK 原生动态代理是基于接口实现的，而 cglib 是基于继承当前类的子类实现的。
+参考：https://blog.csdn.net/meism5/article/details/90413999 怎么实现动态代理？（包括 Chapter 4、JDK 动态代理、Chapter 5、CGLib 动态代理）
+
+JDK 原生动态代理 和 cglib 动态代理。JDK 原生动态代理是基于接口实现的，而 cglib 是基于继承当前类的子类实现的。
 【 1.动态代理：代理类在程序运行时创建的代理方式被成为动态代理。 
    代理模式上讲的(包括我们上面)是静态代理的例子中，代理类(studentProxy)是自己定义好的，在程序运行之前就已经编译完成。
    然而动态代理，代理类并不是在Java代码中定义的，而是在运行时根据我们在Java代码中的“指示”动态生成的。
    相比于静态代理，动态代理的优势在于可以很方便的对代理类的函数进行统一的处理，而不用修改每个代理类中的方法。】
 
-参考：https://www.cnblogs.com/gonjan-blog/p/6685611.html java动态代理实现与原理详细分析
-使用JDK动态代理：
+参考：https://www.cnblogs.com/gonjan-blog/p/6685611.html (博客园)java动态代理实现与原理详细分析
+1.使用JDK动态代理：
 	创建StuInvocationHandler类（代理类），实现InvocationHandler接口，这个类中持有一个被代理对象的实例target。
 	InvocationHandler中有一个invoke方法，所有执行代理对象的方法都会被替换成执行invoke方法。再在invoke方法中执行被代理对象target的相应方法。
 	
@@ -1056,6 +1058,81 @@ JDK 原生动态代理和 cglib 动态代理。JDK 原生动态代理是基于�
 	上面的动态代理的例子，其实就是AOP的一个简单实现了，在目标对象的方法执行之前和执行之后进行了处理，对方法耗时统计。Spring的AOP实现其实也是用了Proxy和InvocationHandler这两个东西的。
 
 
+2. cglib 动态代理
+	为了解决 JDK的动态代理 无法代理不实现接口的类的问题，可以使用 CGLib 的实现动态代理。
+	CGLib（Code Generator Library）是一个强大的、高性能的代码生成库。底层使用了ASM（一个短小精悍的字节码操作框架）来操作字节码生成新的类。
+详细关于 CGLib 的疑难点：
+	pom.xml依赖：1.cglib+asm(即网上的asm-3.3.1，而不是org.ow2.asm)依赖包 	2.Student(被代理类)需要空构造函数
+		<dependency>
+			<groupId>cglib</groupId>
+			<artifactId>cglib</artifactId>
+			<version>3.2.10</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/asm/asm -->
+		<dependency>
+			<groupId>asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>3.3.1</version>
+		</dependency>
+
+简单使用：
+	1.新建代理类CgLibProxy 实现MethodInterceptor接口，重写intercept方法，
+	其中methodProxy.invokeSuper(object, objects);为执行对应被代理类实际方法。
+	2.使用：【参考https://www.cnblogs.com/xrq730/p/6661692.html】
+	public static void main(String[] args) {
+		/** 这是使用Cglib的通用写法，
+		 *  setSuperclass表示设置要代理的类，
+		 *  setCallback表示设置回调即MethodInterceptor的实现类，使用create()方法生成一个代理对象，注意要强转一下，因为返回的是Object。
+		*/
+		// Student student = new Student("silence"); 不需要
+		CgLibProxy cgLibProxy = new CgLibProxy();
+
+		Enhancer enhancer = new Enhancer();
+		enhancer.setSuperclass(Student.class);
+		enhancer.setCallback(cgLibProxy);
+		Student student = (Student)enhancer.create();
+
+		student.display();
+		student.updateName("hello");
+		student.display();
+	}
+	
+【代码使用也可参考： https://www.cnblogs.com/jqyp/archive/2010/08/20/1805041.html java动态代理（JDK和cglib）】
+
+Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/news/txtlist_i22903v.html
+	在1.8版本中运行屡次，基本都可以得到一致的测试结果，那就是 JDK动态代理商 已经比 CGLib动态代理商 快了！
+	以后再有人问你Spring AOP，不要简单的说JDK动态代理商和CGLib这两个了，是时候的可以抛出来对两者之间区别的了解，是有加分的哦！
+一、基本概念
+	首先，我们知道Spring AOP的底层实现有两种方式：一种是JDK动态代理商，另一种是CGLib的方式。
+	自Java 1.3以后，Java提供了动态代理商技术，允许开发者在运行期创立接口的代理商实例，后来这项技术被使用到了Spring的很多地方。
+
+	JDK动态代理商主要涉及java.lang.reflect包下边的两个类：Proxy和InvocationHandler。
+	其中，InvocationHandler是一个接口，可以通过实现该接口定义横切逻辑，并通过反射机制调使用目标类的代码，动态地将横切逻辑和业务逻辑编织在一起。
+	JDK动态代理商的话，他有一个限制，就是它只能为接口创立代理商实例，而对于没有通过接口定义业务方法的类，如何创立动态代理商实例哪？答案就是CGLib。
+	CGLib采使用底层的字节码技术，全称是：Code Generation Library，CGLib可以为一个类创立一个子类，在子类中采使用方法阻拦的技术阻拦所有父类方法的调使用并顺势织入横切逻辑。
+
+二、JDK 和 CGLib动态代理商区别
+	1、JDK动态代理商具体实现原理：
+	通过实现InvocationHandler接口创立自己的调使用解决器；
+	通过为Proxy类( Proxy.newProxyInstance() )指定ClassLoader对象和一组interface来创立动态代理商；
+	通过反射机制获取动态代理商类的构造函数，其唯一参数类型就是调使用解决器 接口类型；
+	通过构造函数创立动态代理商类实例，构造时调使用解决器对象作为参数参入；
+
+	JDK动态代理商是 面向接口 的代理商模式，假如被代理商目标没有接口那么Spring也无能为力，Spring通过Java的反射机制生产被代理商接口的新的匿名实现类，重写了其中AOP的加强方法。
+
+	2、CGLib动态代理商：
+	CGLib是一个强大、高性能的Code生产类库，可以实现运行期动态扩展java类，Spring在运行期间通过 CGlib继承要被动态代理商的类，重写父类的方法，实现AOP面向切面编程呢。
+	
+	3、两者比照：
+	JDK动态代理商是面向接口的。
+	CGLib动态代理商是通过 字节码底层 继承 要代理商类 来实现（假如被代理商类被final关键字所修饰，那么抱歉会失败）。
+
+	4、用注意：
+	假如要被代理商的对象 是个实现类，那么Spring会用JDK动态代理商来完成操作（Spirng默认采使用JDK动态代理商实现机制）；
+	假如要被代理商的对象 不是个实现类, 那么Spring会强制用CGLib来实现动态代理商。
+
+
+
 五、对象拷贝
 
 61.为什么要使用克隆？
@@ -1063,6 +1140,7 @@ JDK 原生动态代理和 cglib 动态代理。JDK 原生动态代理是基于�
 62.如何实现对象克隆？
 
 63.深拷贝和浅拷贝区别是什么？
+
 
 
 六、Java Web
@@ -1081,21 +1159,17 @@ JDK 原生动态代理和 cglib 动态代理。JDK 原生动态代理是基于�
 
 70.spring mvc 和 struts 的区别是什么？
 
-
-
-71.如何避免 sql 注入？【2. mybatis防止sql注入】
+71.如何避免 sql 注入？
+【2. mybatis防止sql注入】
 
 参考：https://blog.csdn.net/alan_liuyue/article/details/88314299
 
 1.简介：SQL注入就是客户端在向服务器发送请求的时候，sql命令通过表单提交或者url字符串拼接传递到后台持久层，最终达到欺骗服务器执行恶意的SQL命令；
-
 防止：
-
   (1) 前端：前端表单进行参数格式控制；
-
   (2) 后端：2.1 后台进行参数格式化，过滤所有涉及sql的非法字符；
+           2.2 持久层使用参数化的持久化sql，使用预编译语句集，切忌使用拼接字符串；
 
-                  2.2 持久层使用参数化的持久化sql，使用预编译语句集，切忌使用拼接字符串；
 
 2. mybatis防止sql注入：mybatis是一款优秀的持久层框架，在防止sql注入方面，mybatis启用了预编译功能，在所有的SQL执行前，都会先将SQL发送给数据库进行编译，执行时，直接替换占位符"?"即可；
 
@@ -1117,8 +1191,7 @@ ${XXX}，该方式则会直接将参数嵌入sql语句，未经过预编译，�
 74.throw 和 throws 的区别？
 
 【throw 用于try-catch或代码中直接抛出一个异常，throws用于方法声明定义可能抛出异常】
-
-throw是真实抛出一个异常（代码中用）、throws是声明可能抛出一个异常（方法声明用）
+  throw是真实抛出一个异常（代码中用）、throws是声明可能抛出一个异常（方法声明用）
 
 
 
@@ -1239,6 +1312,7 @@ GET参数通过URL传递，POST放在Request body中。
 
 86.如何实现跨域？
 
+
 87.说一下 JSONP 实现原理？
 
 
@@ -1312,7 +1386,7 @@ spring cloud ： 
 
 【实践： 类加 @Aspect 、
 
-               声明   @Pointcut (需要加强的一些方法) 、 @Before 进入类前执行，     @AfterReturning、                                                 @AfterThrowing(后置异常通知)、@After (后置最终通知，final增强，不管是抛出异常或者正常退出都会执行)、                           @Around(环绕通知,环绕增强，相当于MethodInterceptor) 】
+               声明   @Pointcut (需要加强的一些方法) 、 @Before 进入类前执行，  @AfterReturning、                                              @AfterThrowing(后置异常通知)、@After (后置最终通知，final增强，不管是抛出异常或者正常退出都会执行)、                           		      @Around(环绕通知,环绕增强，相当于MethodInterceptor) 】
 
 
 
