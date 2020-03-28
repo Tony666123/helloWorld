@@ -938,7 +938,7 @@ public class ThreadLocalExsample {
    synchronized 是由一对 monitorenter/monitorexit 指令实现的，monitor 对象是同步的基本实现单元。
    
    synchronized底层原理 Java面试热点：synchronized原理剖析与优化 ：https://www.bilibili.com/video/BV1JJ411J7Ym?p=13 
-笔记如下：
+笔记如下：（javap -v -p xxx.class）
 synchronized修饰对象(同步代码块)：
 	private static Object obj = new Object()；
 	synchronized(obj){ //monitorenter指令
