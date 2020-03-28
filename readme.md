@@ -936,16 +936,55 @@ public class ThreadLocalExsample {
 52.说一下 synchronized 底层实现原理？
    【monitorenter 和 monitorexit 指令】
    synchronized 是由一对 monitorenter/monitorexit 指令实现的，monitor 对象是同步的基本实现单元。
+   
+   synchronized底层原理 Java面试热点：synchronized原理剖析与优化 ：https://www.bilibili.com/video/BV1JJ411J7Ym?p=13 
+笔记如下：
+synchronized修饰对象(同步代码块)：
+	private static Object obj = new Object()；
+	synchronized(obj){ //monitorenter指令
+	   system.out.println();
+	}		   //monitorexit指令
+   1.monitorenter小结：
+	synchronized的锁对象会关联一个monitor，这个monitor不是我们主动创建的，是JVM的线程执行到这个同步代码块，发现锁对象没有monitor就会创建monitor，monitor内部有两个重要的成员变量owner：拥有这把锁的线程，recursion：会记录线程拥有锁的次数。当一个线程拥有monitor后其他线程只能等待。
+   2.monitorexit释放锁：
+  	monitorexit插入在方法结束和异常处，JVM保证每个monitorenter必须对应一个monitorexit。
+	能执行monitorexit指令的线程一定是之前拥有过当前对象的monitor锁的线程。
+	执行monitorexit时会将monitor的recursion减1，当recursion减为0时，线程就释放锁。
+   3.面试题synchronized出现异常会释放锁吗？
+   	会，会释放锁。同步代码块里出现异常会自动释放锁。
+	
+synchronized修饰方法(同步方法)：
+	public synchronized void test(){ 
+	   system.out.println();
+	}
+    1.同步方法在反汇编后，会增加acc_synchronized修饰，会隐式调用monitorenter和monitorexit。在执行同步方法前会调用monitorenter，在执行完同步方法后会调用monitorexit。
+    
+小结：
+	通过javap反汇编我们看到synchronized使用变成了monitorenter和monitorexit两个指令，每个锁对象都会关联一个monitor(监视器，它才是真正的锁对象)，它内部有两个重要的成员变量owner：会保存获得锁的线程，recursion会保存线程获得锁的次数，当执行到monitorexit时，recursion会减1，当计数器减到0时，这个线程会释放锁。
 
-
+   
 53.synchronized 和 volatile 的区别是什么？
 
 
 54.synchronized 和 Lock 有什么区别？
 【 synchronized 可以用在 类、对象、方法、代码块；
-   Lock只能用在代码块上；需要手动释放；tryLock() 区别是当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止】
-   
-synchronized底层原理 Java面试热点：synchronized原理剖析与优化 ：https://www.bilibili.com/video/BV1JJ411J7Ym?p=13 
+   Lock只能用在代码块上；需要手动释放；
+   tryLock() 区别是当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止】
+
+【synchronized 可以给类、方法、代码块加锁；而 lock 只能给代码块加锁。
+ synchronized 不需要手动获取锁和释放锁，使用简单，发生异常会自动释放锁，不会造成死锁；
+  而 lock 需要自己加锁和释放锁，如果使用不当没有 unLock()去释放锁就会造成死锁。
+通过 Lock 可以知道有没有成功获取锁，而 synchronized 却无法办到。】
+
+【面试题：synchronized 与 Lock 的区别 (https://www.bilibili.com/video/BV1JJ411J7Ym?p=14)
+1.synchronized是关键字，Lock是一个接口。
+2.synchronized会自动释放锁，而Lock必须手动释放锁。
+3.synchronized是不可中断的，Lock可以中断也可以不中断。
+4.通过Lock可以知道线程有没有拿到锁（调用lock.tryLock()方法会返回true或false），而synchronized不能。
+5.synchronized能锁住方法和代码块，而Lock只能锁住代码块。
+6.Lock可以使用读锁(ReentrantReadWriteLock)提高多线程 读效率。（Lock有一个实现类ReentrantReadWriteLock允许多个线程读，但只能有一个线程写）
+7.synchronized是非公平锁(非公平即，不是按照先来后到的顺序来竞争锁，而是随机的)，ReentrantLock可以控制是否是公平锁。
+】
 
 synchronized的使用：
 	public class TestSynDemo {
