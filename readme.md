@@ -826,6 +826,40 @@ public class TestThreadPool {
 
 48.多线程锁的升级原理是什么？
 
+【29_平时写代码如何对synchronized优化：
+	1.减少synchronized的范围
+		同步代码块中尽量短，减少同步代码块中代码的执行时间，减少锁的竞争。
+	2.降低synchronized锁的粒度
+		将一个锁拆分成多个锁提高并发度。
+		
+典例：Hashtable和ConcurrentHashMap
+	Hashtable hs = new Hashtable();
+	hs.put("aa","aa");
+	hs.put("bb","bb");
+**hashTable：锁住整个哈希表，一个操作正在进行时，其他操作也同时锁定，效率低下。（即，进行put操作时，get操作也在等待锁的释放）
+ConcurrentHashMap：get方法不加锁，put方法是synchronized + casTabAt对节点进行加锁(不同的bucket桶加不同锁)，这样不同一个线程写时，另一个线程也可以读取。
+
+写代码时，不要提高类来加锁；如两段无业务相关的代码方法：因为这样就是同一个锁，和hashTable的锁机制一样，效率低，并发行低。
+	public void test01(){
+		synchronized(Demo.class){
+			......
+		}
+	}
+	public void test02(){
+		synchronized(Demo.class){
+			......
+		}
+	}
+
+	3.读写分离
+	如 ConcurrentHashMap，读取时不加锁，写入和删除时加锁；还有如其他集合CopyOnwriteArrayList和CopyOnwriteSet
+】
+
+synchronized 锁升级原理：
+	在 锁对象 的 对象头 里面有一个 threadid 字段，在第一次访问的时候 threadid 为空，jvm 让其持有偏向锁，并将 threadid 设置为其 线程 id，再次进入的时候会先判断 threadid 是否与其线程 id 一致，如果一致则可以直接使用此对象，如果不一致，则升级偏向锁为轻量级锁，通过 自旋循环 一定次数来获取锁，执行一定次数之后，如果还没有正常获取到要使用的对象，此时就会把锁从轻量级升级为重量级锁，此过程就构成了 synchronized 锁的升级。
+
+	锁的升级的目的：锁升级是为了减低了锁带来的性能消耗。在 Java 6 之后优化 synchronized 的实现方式，使用了 偏向锁升级为轻量级锁 再升级 到重量级锁的方式，从而减低了锁带来的性能消耗。
+
 
 
 49.什么是死锁？
@@ -977,13 +1011,13 @@ synchronized修饰方法(同步方法)：
 通过 Lock 可以知道有没有成功获取锁，而 synchronized 却无法办到。】
 
 【面试题：synchronized 与 Lock 的区别 (https://www.bilibili.com/video/BV1JJ411J7Ym?p=14)
-1.synchronized是关键字，Lock是一个接口。
-2.synchronized会自动释放锁，而Lock必须手动释放锁。
-3.synchronized是不可中断的，Lock可以中断也可以不中断。
-4.通过Lock可以知道线程有没有拿到锁（调用lock.tryLock()方法会返回true或false），而synchronized不能。
-5.synchronized能锁住方法和代码块，而Lock只能锁住代码块。
-6.Lock可以使用读锁(ReentrantReadWriteLock)提高多线程 读效率。（Lock有一个实现类ReentrantReadWriteLock允许多个线程读，但只能有一个线程写）
-7.synchronized是非公平锁(非公平即，不是按照先来后到的顺序来竞争锁，而是随机的)，ReentrantLock可以控制是否是公平锁。
+	1.synchronized是关键字，Lock是一个接口。
+	2.synchronized会自动释放锁，而Lock必须手动释放锁。
+	3.synchronized是不可中断的，Lock可以中断也可以不中断。
+	4.通过Lock可以知道线程有没有拿到锁（调用lock.tryLock()方法会返回true或false），而synchronized不能。
+	5.synchronized能锁住方法和代码块，而Lock只能锁住代码块。
+	6.Lock可以使用读锁(ReentrantReadWriteLock)提高多线程 读效率。（Lock有一个实现类ReentrantReadWriteLock允许多个线程读，但只能有一个线程写）
+	7.synchronized是非公平锁(非公平即，不是按照先来后到的顺序来竞争锁，而是随机的)，ReentrantLock可以控制是否是公平锁。
 】
 
 synchronized的使用：
@@ -1033,7 +1067,6 @@ synchronized的使用：
 
 
 58.什么是 java 序列化？什么情况下需要序列化？
-
 【Java序列化是内存中 对象 数据的状态 能够被读取出来】
 
 Java序列化是 为了 保存 各种对象在内存中 的状态，并且可以把 保存的对象状态 再读取出来。
@@ -1214,7 +1247,6 @@ session 的工作原理是客户端登录完成之后，服务器会创建对应
 
 
 71.如何避免 sql 注入？
-	
 	使用预处理 PreparedStatement。
 	使用正则表达式过滤掉字符中的特殊字符。
 
@@ -1743,6 +1775,7 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 134.mybatis 如何编写一个自定义插件？
 
 
+
 十四、RabbitMQ
 
 135.rabbitmq 的使用场景有哪些？
@@ -1780,6 +1813,7 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 151.rabbitmq 对集群节点停止顺序有要求吗？
 
 
+
 十五、Kafka
 
 152.kafka 可以脱离 zookeeper 单独使用吗？为什么？
@@ -1803,6 +1837,7 @@ Zookeeper作用：管理broker、consumer。创建Broker后，向zookeeper注册
 155.什么情况会导致 kafka 运行变慢？
 
 156.使用 kafka 集群需要注意什么？
+
 
 
 十六、Zookeeper
