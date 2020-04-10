@@ -1073,6 +1073,16 @@ synchronized修饰方法(同步方法)：
    
 53.synchronized 和 volatile 的区别是什么？
 
+volatile关键字的作用：
+  java volatile关键字作用及使用场景 ：参考：https://www.cnblogs.com/YLsY/p/11295732.html
+	1. volatile关键字的作用：保证了变量的可见性（visibility）。
+	被volatile关键字修饰的变量，如果值发生了变更，其他线程立马可见，避免出现脏读的现象。【每个线程都会有自己的线程空间（称为工作内存），一开始时会从主内存copy数据到自己的内存中，如果有变量是volatile修饰的，但变量在某个线程中发生改变，写到主内存中后，会通知其他线程该变量有变化，重新赋新值。】
+	载如以下代码片段，isShutDown被置为true后，doWork方法仍有执行。如用volatile修饰isShutDown变量，可避免此问题。
+	2. 为什么会出现脏读？
+	Java内存模型规定所有的变量都是存在主存当中，每个线程都有自己的工作内存。线程对变量的所有操作都必须在工作内存中进行，而不能直接对主存进行操作。并且每个线程不能访问其他线程的工作内存。变量的值何时从线程的工作内存写回主存，无法确定。
+
+
+
 
 54.synchronized 和 Lock 有什么区别？
 【 synchronized 可以用在 类、对象、方法、代码块；
