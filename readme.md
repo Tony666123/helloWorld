@@ -1362,7 +1362,8 @@ Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/ne
 
 66.说一下 jsp 的 4 种作用域？
 
-67.session 和 cookie 有什么区别？
+
+67.session（HttpSession） 和 cookie 有什么区别？
 存储位置不同：session用于服务器端（后台）存储数据，cookie用于浏览器（前端）存储数据；
 安全性不同：session存储在服务器中，相对安全，cookie 安全性一般，因为cookie存储在浏览器中，可以被伪造和修改；
 容量和个数限制：cookie 有容量限制，每个站点下的 cookie 也有个数限制。
@@ -1371,14 +1372,36 @@ Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/ne
 存储的多样性：session 可以存储在 Redis 中、数据库中、应用程序中；而 cookie 只能存储在浏览器中。
 跨域支持上不同：cookie支持跨域名访问。
 	       session不支持跨域名访问。
+参考：https://www.cnblogs.com/mark5/p/11641131.html cookie和session的区别有哪些
 
+
+(HttpSessiion)使用参考：https://github.com/nameof/RedisSSO 
+基于Redis封装自定义HttpSession，实现跨域单点登录和Session共享，支持android客户端扫码登陆，并使用redis模拟消息队列进行注销消息的发送。
+
+
+** 参考：https://blog.csdn.net/qq_42651904/article/details/85543640 Java中Cookie的使用（Cookie 和Session的区别）
+区别	Cookie	Session
+存在:
+	Cookie是客户端技术，通常保存在客户端，即本地，IE浏览器把Cookie信息保存在类似于C:\windows\cookies的目录下。
+	因为Cookie在客户端所以可以编辑伪造，不是十分安全。
+	Session是服务器端技术，在服务端，利用这个技术，服务器在运行时可以为每一个用户的浏览器创建一个其独享的session对象，
+	由于session为用户浏览器独享，所以用户在访问服务器的web资源时，可以把各自的数据放在各自的session中，当用户再去访问服务器中的其它web资源时，其它web资源再从用户各自的session中取出数据为用户服务。
+	
+存储数据：	Cookie只能存储 String 类型的对象；	Session 能够存储任意的 java 对象
+性能：	Cookie存在客户端对服务器没影响；	Session过多时会消耗服务器资源，大型网站会有专门Session服务器
+作用域：	Cookie通过设置指定作用域只能在指定作用域有效；	Session在整个网页都有效
+作用时间：	Cookie可以通过 setMaxAge设置有效时间，即使浏览器关闭了仍然存在；	关闭网页Session就结束了
 
 
 68.说一下 session 的工作原理？
-session 的工作原理是客户端登录完成之后，服务器会创建对应的 session，session 创建完之后，会把 session 的 id 发送给客户端，客户端再存储到浏览器中。这样客户端每次访问服务器时，都会带着 sessionid，服务器拿到 sessionid 之后，在内存找到与之对应的 session 这样就可以正常工作了。
+	session 的工作原理是客户端登录完成之后，服务器会创建对应的 session，
+	session 创建完之后，会把 session 的 id 发送给客户端，客户端再存储到浏览器中。
+	这样客户端每次访问服务器时，都会带着 sessionid，服务器拿到 sessionid 之后，在内存找到与之对应的 session 这样就可以正常工作了。
 
 
 69.如果客户端禁止 cookie 能实现 session 还能用吗？
+可以，session只是依赖cookie存储sessionID，如果cooki禁用了，可以使用url中添加sessionID的方式保证session能正常使用。
+
 
 70.spring mvc 和 struts 的区别是什么？
 
@@ -1445,6 +1468,19 @@ NullPointException、IOException、ClassCastException 类转换异常、NoSuchMe
 八、网络
 
 79.http 响应码 301 和 302 代表的是什么？有什么区别？
+	301：永久重定向。
+	302：暂时重定向。
+	它们的区别是，301 对搜索引擎优化（SEO）更加有利；302 有被提示为网络拦截的风险。
+
+百度参考：
+  301转向(或叫301重定向，301跳转)是当用户或搜索引擎向网站服务器发出浏览请求时，服务器返回的HTTP数据流中头信息(header)中的状态码的一种，表示本网页永久性转移到另一个地址。
+
+参考菜鸟：
+	301	Moved Permanently	
+		永久移动。请求的资源已被永久的移动到新URI，返回信息会包括新的URI，浏览器会自动定向到新URI。今后任何新的请求都应使用新的URI代替
+	302	Found	
+		临时移动。与301类似。但资源只是临时被移动。客户端应继续使用原有URI
+
 
 80.forward 和 redirect 的区别？
 
