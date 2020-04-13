@@ -1363,6 +1363,15 @@ Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/ne
 66.说一下 jsp 的 4 种作用域？
 
 67.session 和 cookie 有什么区别？
+存储位置不同：session用于服务器端（后台）存储数据，cookie用于浏览器（前端）存储数据；
+安全性不同：session存储在服务器中，相对安全，cookie 安全性一般，因为cookie存储在浏览器中，可以被伪造和修改；
+容量和个数限制：cookie 有容量限制，每个站点下的 cookie 也有个数限制。
+	       单个cookie保存的数据<=4KB，一个站点最多保存20个Cookie。
+	       对于session来说并没有上限，但出于对服务器端的性能考虑，session内不要存放过多的东西，并且设置session删除机制。
+存储的多样性：session 可以存储在 Redis 中、数据库中、应用程序中；而 cookie 只能存储在浏览器中。
+跨域支持上不同：cookie支持跨域名访问。
+	       session不支持跨域名访问。
+
 
 
 68.说一下 session 的工作原理？
