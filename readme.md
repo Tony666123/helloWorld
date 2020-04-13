@@ -1073,15 +1073,59 @@ synchronized修饰方法(同步方法)：
    
 53.synchronized 和 volatile 的区别是什么？
 
+参考1：https://www.iteye.com/blog/723242038-2069470 volatile 与 synchronized 区别
+使用volatile关键字：用一句话概括volatile,它能够使变量在值发生改变时能尽快地让其他线程知道.
+volatile详解：
+   首先我们要先意识到有这样的现象,编译器为了加快程序运行的速度,对一些变量的写操作会先在（线程的工作内存中）寄存器或者是CPU缓存上进行,最后才写入内存（主内存）.
+   而在这个过程,变量的新值对其他线程是不可见的.而volatile的作用就是使它修饰的变量的读写操作都必须在内存中进行!
+volatile与synchronized：
+    volatile本质是在告诉jvm当前变量在（工作内存）寄存器中的值是不确定的,需要从主存中读取,synchronized则是锁定当前变量,只有当前线程可以访问该变量,其他线程被阻塞住.
+
+参考2：https://blog.csdn.net/vking_wang/article/details/9982709 【Java线程】volatile的适用场景
+   把代码块声明为 synchronized，有两个重要后果，通常是指该代码具有 原子性（atomicity）和 可见性（visibility）。
+   原子性 意味着某个时刻，只有一个线程能够执行一段代码，这段代码通过一个monitor object保护。从而防止多个线程在更新共享状态时相互冲突。
+   可见性 则更为微妙，它必须确保释放锁之前对共享数据做出的更改对于随后获得该锁的另一个线程是可见的。
+      —— 如果没有同步机制提供的这种可见性保证，线程看到的共享变量可能是修改前的值或不一致的值，这将引发许多严重问题。
+
+volatile的使用条件:
+   Volatile 变量具有 synchronized 的可见性特性，但是不具备原子性。这就是说线程 能够自动发现 volatile 变量的最新值。
+
+   Volatile 变量可用于提供线程安全，但是只能应用于非常有限的一组用例：多个变量之间或者某个变量的当前值与修改后值之间没有约束。
+   因此，单独使用 volatile 还不足以实现计数器、互斥锁或任何具有与多个变量相关的不变式（Invariants）的类（例如 “start <=end”）。
+
+volatile的适用场景：
+    模式 #1：状态标志
+	也许实现 volatile 变量的规范使用仅仅是使用一个布尔状态标志，用于指示发生了一个重要的一次性事件，例如完成初始化或请求停机。
+
+	volatile boolean shutdownRequested;
+	...
+	public void shutdown() { 
+	    shutdownRequested = true; 
+	}
+	public void doWork() { 
+	    while (!shutdownRequested) { 
+		// do stuff
+	    }
+	}
+   模式 #2：一次性安全发布（one-time safe publication）
+   模式 #3：独立观察（independent observation）
+   模式 #4：“volatile bean” 模式
+   模式 #5：开销较低的“读－写锁”策略
+
+
 volatile关键字的作用：
   java volatile关键字作用及使用场景 ：参考：https://www.cnblogs.com/YLsY/p/11295732.html
 	1. volatile关键字的作用：保证了变量的可见性（visibility）。
 	被volatile关键字修饰的变量，如果值发生了变更，其他线程立马可见，避免出现脏读的现象。【每个线程都会有自己的线程空间（称为工作内存），一开始时会从主内存copy数据到自己的内存中，如果有变量是volatile修饰的，但变量在某个线程中发生改变，写到主内存中后，会通知其他线程该变量有变化，重新赋新值。】
 	载如以下代码片段，isShutDown被置为true后，doWork方法仍有执行。如用volatile修饰isShutDown变量，可避免此问题。
 	2. 为什么会出现脏读？
-	Java内存模型规定所有的变量都是存在主存当中，每个线程都有自己的工作内存。线程对变量的所有操作都必须在工作内存中进行，而不能直接对主存进行操作。并且每个线程不能访问其他线程的工作内存。变量的值何时从线程的工作内存写回主存，无法确定。
+	Java内存模型规定所有的变量都是存在主内存当中，每个线程都有自己的工作内存。线程对变量的所有操作都必须在工作内存中进行，而不能直接对主存进行操作。并且每个线程不能访问其他线程的工作内存。变量的值何时从线程的工作内存写回主存，无法确定。
 
-
+/*
+volatile 是变量修饰符；synchronized 是修饰类、方法、代码段。
+volatile 仅能实现变量的修改可见性，不能保证原子性；而 synchronized 则可以保证变量的修改可见性和原子性。
+volatile 不会造成线程的阻塞；synchronized 可能会造成线程的阻塞。
+*/
 
 
 54.synchronized 和 Lock 有什么区别？
