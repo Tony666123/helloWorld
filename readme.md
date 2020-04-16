@@ -1157,7 +1157,7 @@ volatile 不会造成线程的阻塞；synchronized 可能会造成线程的阻�
 54.synchronized 和 Lock 有什么区别？
 【 synchronized 可以用在 类、对象、方法、代码块；
    Lock只能用在代码块上；需要手动释放；
-   tryLock() 区别是当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止】
+   tryLock() 区别：当所别其他线程占用，Lock会等待，tryLock不会等待，但tryLock可以设置等待时，过时就停止】
 
 【synchronized 可以给类、方法、代码块加锁；而 lock 只能给代码块加锁。
  synchronized 不需要手动获取锁和释放锁，使用简单，发生异常会自动释放锁，不会造成死锁；
@@ -1214,7 +1214,9 @@ synchronized的使用：
     
 
 55.synchronized 和 ReentrantLock 区别是什么？
+
 ReentrantLock可以控制是否是公平锁
+
 使用：
   Lock lock = new ReentrantLock(); //Lock是接口，ReentrantLock是Lock的常用实现类
   try{
@@ -1239,7 +1241,33 @@ ReentrantLock可以控制是否是公平锁
 
 
 56.说一下 atomic 的原理？
+     在多线程的场景中，我们需要保证数据安全，就会考虑同步的方案，通常会使用synchronized或者lock来处理，使用了synchronized意味着内核态的一次切换。这是一个很重的操作。
 
+     有没有一种方式，可以比较便利的实现一些简单的数据同步，比如计数器等等。concurrent包下的atomic提供我们这么一种轻量级的数据同步的选择。
+
+class MyThread implements Runnable {
+ 
+    static AtomicInteger ai=new AtomicInteger(0);
+ 
+    public void run() {
+        for (int m = 0; m < 1000000; m++) {
+            ai.getAndIncrement();
+        }
+    }
+};
+ 
+public class TestAtomicInteger {
+    public static void main(String[] args) throws InterruptedException {
+        MyThread mt = new MyThread();
+ 
+        Thread t1 = new Thread(mt);
+        Thread t2 = new Thread(mt);
+        t1.start();
+        t2.start();
+        Thread.sleep(500);
+        System.out.println(MyThread.ai.get());
+    }
+todo ing
 
 
 四、反射
