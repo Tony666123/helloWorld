@@ -342,7 +342,30 @@ https://mp.weixin.qq.com/s?__biz=MzU1MDE4MzUxNA==&mid=2247483679&idx=1&sn=4a5184
 		若为链表，则在链表中通过key.equals(k)查找，O(n)。
 】
 
+参考：https://www.cnblogs.com/wangflower/p/12235595.html HashMap什么时候会触发链表转红黑树
+结论是目前能触发转化的两个条件是：一个是链表的长度达到8个，一个是数组的长度达到64个
 
+参考：https://blog.csdn.net/cenjia7278/article/details/100956198 HashMap底层数据结构之链表转红黑树的具体时机
+HashMap中有关“链表转红黑树”阈值的声明：
+
+   /**
+    *  使用红黑树(而不是链表)来存放元素。
+    *  当向至少具有这么多节点的链表再添加元素时，链表就将转换为红黑树。
+    *  该值必须大于2，并且应该至少为8，以便于删除红黑树时转回链表。【当链表长度超过阈值（8）时，将链表转换为红黑树，】
+    */
+    static final int TREEIFY_THRESHOLD = 8;
+ 
+    /**
+     *  当 桶数组 容量小于该值时，优先进行扩容，而不是树化：
+     */
+    static final int MIN_TREEIFY_CAPACITY = 64;
+    ...
+		//“binCount >= 7”：p从链表.index(0)开始，当binCount == 7时，p.index == 7,newNode.index == 8； 
+		//也就是说，当链表已经有8个节点了，此时再新链上第9个节点，在成功添加了这个新节点之后，立马做链表转红黑树。
+		if (binCount >= TREEIFY_THRESHOLD - 1)
+			treeifyBin(tab, hash); //链表转红黑树 break;
+	通过源码解析，我们已经很清楚HashMap是在“当链表已经有8个节点了，此时再新链上第9个节点，在成功添加了这个新节点之后，立马做链表转红黑树”。	
+		
 24.说一下 HashSet 的实现原理？
 
 HashSet 是基于 HashMap 实现的，HashSet 底层使用 HashMap 来保存所有元素，因此 HashSet 的实现比较简单，相关 HashSet 的操作，基本上都是直接调用底层 HashMap 的相关方法来完成，HashSet 不允许重复的值（见20）。
@@ -1127,6 +1150,9 @@ volatile 仅能实现变量的修改可见性，不能保证原子性；而 sync
 volatile 不会造成线程的阻塞；synchronized 可能会造成线程的阻塞。
 */
 
+【volatile 变量每次读取前必须先从主内存刷新最新的值，每次写入后必须立即同步回主内存当中。总结，volatile变量可以实现线程之间的通信。
+  参考：https://www.cnblogs.com/yangwei20160911/p/6536758.html
+  https://developer.aliyun.com/ask/134175?spm=a2c6h.13159736 volatile变量的读取每次都是从主内存中获取么？】
 
 54.synchronized 和 Lock 有什么区别？
 【 synchronized 可以用在 类、对象、方法、代码块；
@@ -1147,6 +1173,12 @@ volatile 不会造成线程的阻塞；synchronized 可能会造成线程的阻�
 	6.Lock可以使用读锁(ReentrantReadWriteLock)提高多线程 读效率。（Lock有一个实现类ReentrantReadWriteLock允许多个线程读，但只能有一个线程写）
 	7.synchronized是非公平锁(非公平即，不是按照先来后到的顺序来竞争锁，而是随机的)，ReentrantLock可以控制是否是公平锁。
 】
+      【 实现层面不一样。synchronized 是 Java 关键字，JVM层面 实现加锁和释放锁；Lock 是一个接口，在代码层面实现加锁和释放锁
+	是否自动释放锁。synchronized 在线程代码执行完或出现异常时自动释放锁；Lock 不会自动释放锁，需要再 finally {} 代码块显式地中释放锁
+	是否一直等待。synchronized 会导致线程拿不到锁一直等待；Lock 可以设置尝试获取锁或者获取锁失败一定时间超时
+	获取锁成功是否可知。synchronized 无法得知是否获取锁成功；Lock 可以通过 tryLock 获得加锁是否成功
+	功能复杂性。synchronized 加锁可重入、不可中断、非公平；Lock 可重入、可判断、可公平和不公平、细分读写锁提高效率
+	参考：https://blog.csdn.net/meism5/article/details/90413893 synchronized 和 Lock 有什么区别？】
 
 synchronized的使用：
 	public class TestSynDemo {
@@ -1182,6 +1214,29 @@ synchronized的使用：
     
 
 55.synchronized 和 ReentrantLock 区别是什么？
+ReentrantLock可以控制是否是公平锁
+使用：
+  Lock lock = new ReentrantLock(); //Lock是接口，ReentrantLock是Lock的常用实现类
+  try{
+     lock. lock();...
+  }
+
+参考：https://blog.csdn.net/weixin_42739473/article/details/81220767 Lock和实现类中ReentrantLock中的lock()与tryLock()区别
+  ReentrantLock是Lock的常用实现类，lock.lock()是以lock对象为锁，代码中使用的同一个lock对象，所以使用的是同一把锁，
+  一个线程通过lock()方法拿到了锁，执行了System.out.println("执行了方法");打印出结果，之后没有调用lock.unlock()方法，所以没有释放锁，
+  第二个线程在调用lock.lock()控制台就一直阻塞在那，说明lock.lock()是一个阻塞方法，而lock.tryLock()是不同，他是一个有返回值的方法，在没有设置longTime和TimeUnit时，即试图获取锁，没有获取到就返回false,获取到就返回true,这个方法是立即返回的，
+  当你调用lock.lock(long time,TimeUnit unit)，意思就是 在指定时间范围内阻塞，规定时间范围内获取到锁就返回true,否则就返回false，注意：如果在当前线程中以将中断表示位设为true，例如Thread.currentThread().interrupt();执行lock.lock(long time,TimeUnit unit)就会报java.lang.InterruptedException异常
+
+【同上面试题：synchronized 与 Lock 的区别 (https://www.bilibili.com/video/BV1JJ411J7Ym?p=14)
+	1.synchronized是关键字，Lock是一个接口。
+	2.synchronized会自动释放锁，而Lock必须手动释放锁。
+	3.synchronized是不可中断的，Lock可以中断也可以不中断。
+	4.通过Lock可以知道线程有没有拿到锁（调用lock.tryLock()方法会返回true或false），而synchronized不能。
+	5.synchronized能锁住方法和代码块，而Lock只能锁住代码块。
+	6.Lock可以使用读锁(ReentrantReadWriteLock)提高多线程 读效率。（Lock有一个实现类ReentrantReadWriteLock允许多个线程读，但只能有一个线程写）
+	7.synchronized是非公平锁(非公平即，不是按照先来后到的顺序来竞争锁，而是随机的)，ReentrantLock可以控制是否是公平锁。
+】
+
 
 56.说一下 atomic 的原理？
 
