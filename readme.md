@@ -1096,6 +1096,10 @@ synchronized修饰方法(同步方法)：
    
 53.synchronized 和 volatile 的区别是什么？
 
+【volatile 仍然是从主内存到工作内存的拷贝，只是volatile修饰会在工作内存修改后迅速同步到主内存，从而使变量在值发生改变时能尽快地让其他线程知道。
+保证了每个线程值的可见性（指当多个线程访问同一个变量时，一个线程修改了这个变量的值，其他线程能够立即看得到修改的值），有序性（即程序执行的顺序按照代码的先后顺序执行）；但是不能保证原子性（一个线程中，不论是for循环还是其他，都要独立一次执行完。其他线程不能插入）；
+而 atomic包下提供了一些原子操作类，即对基本数据类型的 自增（加1操作），自减（减1操作）、以及加法操作（加一个数），减法操作（减一个数）进行了封装，保证这些操作是原子性操作】
+
 参考1：https://www.iteye.com/blog/723242038-2069470 volatile 与 synchronized 区别
 使用volatile关键字：用一句话概括volatile,它能够使变量在值发生改变时能尽快地让其他线程知道.
 volatile详解：
@@ -1267,7 +1271,111 @@ public class TestAtomicInteger {
         Thread.sleep(500);
         System.out.println(MyThread.ai.get());
     }
-todo ing
+
+参考1：https://mp.weixin.qq.com/s/aw6OXC9wkxH42rCywNd7yQ Java并发编程包中atomic的实现原理
+参考2：https://blog.csdn.net/wuzhiwei549/article/details/82621947 atomic的实现原理
+在以上代码中，使用AtomicInteger声明了一个全局变量，并且在多线程中进行自增，代码中并没有进行显示的加锁。
+以上代码的输出结果，永远都是 2000000。如果将AtomicInteger换成Integer，打印结果基本都是小于 2000000。
+也就说明AtomicInteger声明的变量，在多线程场景中的自增操作是可以保证线程安全的。接下来我们分析下其原理。
+
+原理：
+   我们可以看一下AtomicInteger的代码，private volatile int value;他的值是存在一个volatile的int里面。
+   而volatile只能保证这个变量的可见性。不能保证他的原子性。
+   可以看到getAndIncrement这个类似i++的函数，可以发现，是调用了UnSafe中的getAndAddInt。
+   进一步，我们可以发现实现方式： image.png
+        如何保证原子性：自旋 + CAS（乐观锁）。在这个过程中，通过compareAndSwapInt比较更新value值，如果更新失败，重新获取旧值，然后更新。
+
+优缺点：
+    CAS相对于其他锁，不会进行内核态操作，有着一些性能的提升。但同时引入自旋，当锁竞争较大的时候，自旋次数会增多。cpu资源会消耗很高。
+    换句话说，CAS+自旋适合使用在低并发有同步数据的应用场景。
+    
+
+Java 8做出的改进和努力：
+    在Java 8中引入了4个新的计数器类型，LongAdder、LongAccumulator、DoubleAdder、DoubleAccumulator。他们都是继承于Striped64。
+    在LongAdder 与AtomicLong有什么区别？
+    Atomic* 遇到的问题是，只能运用于低并发场景。因此LongAddr在这基础上引入了分段锁的概念。可以参考《JDK8系列之LongAdder解析》一起看看做了什么。 大概就是当竞争不激烈的时候，所有线程都是通过CAS对同一个变量（Base）进行修改，当竞争激烈的时候，会将根据当前线程哈希到对于Cell上进行修改（多段锁）。
+
+    可以看到大概实现原理是：通过CAS乐观锁保证原子性，通过自旋保证当次修改的最终修改成功，通过降低锁粒度（多段锁）增加并发性能。    
+
+【volatile 仍然是从主内存到工作内存的拷贝，只是volatile修饰会在工作内存修改后迅速同步到主内存，从而使变量在值发生改变时能尽快地让其他线程知道。
+保证了每个线程值的可见性（指当多个线程访问同一个变量时，一个线程修改了这个变量的值，其他线程能够立即看得到修改的值），有序性（即程序执行的顺序按照代码的先后顺序执行）；但是不能保证原子性（一个线程中，不论是for循环还是其他，都要独立一次执行完。其他线程不能插入）；
+而 atomic包下提供了一些原子操作类，即对基本数据类型的 自增（加1操作），自减（减1操作）、以及加法操作（加一个数），减法操作（减一个数）进行了封装，保证这些操作是原子性操作】
+public class CountTest {
+    // 请求总数
+    public static int clientTotal = 5000;
+    public static volatile int count = 0;
+
+    public static void main(String[] args) throws Exception {
+        //使用CountDownLatch来等待计算线程执行完
+        final CountDownLatch countDownLatch = new CountDownLatch(clientTotal);
+        //开启clientTotal个线程进行累加操作
+        for(int i=0;i<clientTotal;i++){
+            new Thread(){
+                public void run(){
+                    count++;//自加操作
+                    countDownLatch.countDown();
+                }
+            }.start();
+        }
+        //等待计算线程执行完
+        countDownLatch.await();
+        System.out.println(count);
+    }
+}
+====================================
+public class CountTest {
+    // 请求总数
+    public static int clientTotal = 5000;
+    public static AtomicInteger count = new AtomicInteger(0); //上面的程序修改处 1
+
+    public static void main(String[] args) throws Exception {
+        //使用CountDownLatch来等待计算线程执行完
+        final CountDownLatch countDownLatch = new CountDownLatch(clientTotal);
+        //开启clientTotal个线程进行累加操作
+        for(int i=0;i<clientTotal;i++){
+            new Thread(){
+                public void run(){
+                    count.incrementAndGet();//先加1，再get到值	//上面的程序修改处 2
+                    countDownLatch.countDown();
+                }
+            }.start();
+        }
+        //等待计算线程执行完
+        countDownLatch.await();
+        System.out.println(count);
+    }
+}
+
+** 参考：https://www.cnblogs.com/java-chen-hao/p/9968544.html 并发编程（一）—— volatile关键字和 atomic包
+
+扩展：
+** https://mp.weixin.qq.com/s?__biz=MzI3NzE0NjcwMg==&mid=2650121285&idx=1&sn=7cf9b5badd6d38b57ccfbfed63d3aad1&chksm=f36bb964c41c307218914cab6c1592f649281460e4ec1f85627c1311441c8a43ee1854440552&scene=21#wechat_redirect 乐观锁的一种实现方式——CAS()
+
+锁存在的问题
+    Java在JDK1.5之前都是靠synchronized关键字保证同步的，这种通过使用一致的锁定协议来协调对共享状态的访问，可以确保无论哪个线程持有共享变量的锁，都采用独占的方式来访问这些变量。独占锁其实就是一种悲观锁，所以可以说synchronized是悲观锁。
+
+悲观锁机制存在以下问题：
+	1.在多线程竞争下，加锁、释放锁会导致比较多的上下文切换和调度延时，引起性能问题。
+	2.一个线程持有锁会导致其它所有需要此锁的线程挂起。
+	3.如果一个优先级高的线程等待一个优先级低的线程释放锁会导致优先级倒置，引起性能风险。
+    
+    而另一个更加有效的锁就是乐观锁。所谓乐观锁就是，每次不加锁而是假设没有冲突而去完成某项操作，如果因为冲突失败就重试，直到成功为止。
+    与锁相比，volatile变量是一个更轻量级的同步机制，因为在使用这些变量时不会发生上下文切换和线程调度等操作，但是volatile不能解决原子性问题，因此当一个变量依赖旧值时就不能使用volatile变量。因此对于同步最终还是要回到锁机制上来。
+
+乐观锁：
+    乐观锁（ Optimistic Locking）其实是一种思想。相对悲观锁而言，乐观锁假设认为数据一般情况下不会造成冲突，所以在数据进行提交更新的时候，才会正式对数据的冲突与否进行检测，如果发现冲突了，则让返回用户错误的信息，让用户决定如何去做。
+    上面提到的乐观锁的概念中其实已经阐述了他的具体实现细节：主要就是两个步骤：冲突检测和数据更新。其实现方式有一种比较典型的就是Compare and Swap(CAS)。
+
+CAS：
+    CAS是项乐观锁技术，当多个线程尝试使用CAS同时更新同一个变量时，只有其中一个线程能更新变量的值，而其它线程都失败，失败的线程并不会被挂起，而是被告知这次竞争中失败，并可以再次尝试。
+
+CAS 操作包含三个操作数 —— 内存位置（V）、预期原值（A）和新值(B)。如果内存位置的值与预期原值相匹配，那么处理器会自动将该位置值更新为新值。否则，处理器不做任何操作。无论哪种情况，它都会在 CAS 指令之前返回该位置的值。（在 CAS 的一些特殊情况下将仅返回 CAS 是否成功，而不提取当前值。）CAS 有效地说明了“我认为位置 V 应该包含值 A；如果包含该值，则将 B 放到这个位置；否则，不要更改该位置，只告诉我这个位置现在的值即可。”这其实和乐观锁的冲突检查+数据更新的原理是一样的。
+
+***这里再强调一下，乐观锁是一种思想。CAS是这种思想的一种实现方式。
+
+Java对CAS的支持：
+    在JDK1.5 中新增java.util.concurrent(J.U.C)就是建立在CAS之上的。相对于对于synchronized这种阻塞算法，CAS是非阻塞算法的一种常见实现。所以J.U.C在性能上有了很大的提升。
+    我们以java.util.concurrent中的AtomicInteger为例，看一下在不使用锁的情况下是如何保证线程安全的。主要理解getAndIncrement方法，该方法的作用相当于 ++i 操作。
 
 
 四、反射
@@ -1285,6 +1393,18 @@ Java序列化是 为了 保存 各种对象在内存中 的状态，并且可�
 	1.想把 内存中的对象状态 保存到 一个文件中 或者数据库中的时候；
 	2.想用套接字 在网络上传送 对象的时候；
 	3.想通过RMI（远程方法调用） 传输 对象的时候。
+
+序列化就是一种用来处理对象流的机制，所谓对象流也就是将对象的内容进行流化,将数据分解成字节流，以便存储在文件中或在网络上传输
+参考：https://blog.csdn.net/meism5/article/details/90413987 什么是 java 序列化？什么情况下需要序列化？
+序列化：将 Java 对象转换成字节流的过程。
+反序列化：将字节流转换成 Java 对象的过程。
+当 Java 对象需要在网络上传输 或者 持久化存储到文件中时，就需要对 Java 对象进行序列化处理。
+序列化的实现：类实现 Serializable 接口，这个接口没有需要实现的方法。实现 Serializable 接口是为了告诉 jvm 这个类的对象可以被序列化。
+
+注意事项：
+	某个类可以被序列化，则其子类也可以被序列化
+	声明为 static 和 transient 的成员变量，不能被序列化。static 成员变量是描述类级别的属性，transient 表示临时数据
+	反序列化读取序列化对象的顺序要保持一致
 
 
 59.动态代理是什么？有哪些应用？
@@ -1487,7 +1607,7 @@ Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/ne
 
 
 70.spring mvc 和 struts 的区别是什么？
-
+【拦截级别：struts2 是类级别的拦截；spring mvc 是方法级别的拦截。】
 
 71.如何避免 sql 注入？
 	使用预处理 PreparedStatement。
@@ -1679,9 +1799,42 @@ GET参数通过URL传递，POST放在Request body中。
 九、设计模式
 
 88.说一下你熟悉的设计模式？
+单例模式：保证对象实例只创建一次，节省系统开销。
+工厂模式（简单工厂、抽象工厂）：解耦代码。
+
+1.简单工厂：用来生产同一等级结构中的任意产品，对于增加新的产品，无能为力。 （新建一工厂类，if-else判断的形式）
+举例：【PhoneFactory类：手机代工厂（Factory）
+	public class PhoneFactory {
+	    public Phone makePhone(String phoneType) {
+		if(phoneType.equalsIgnoreCase("MiPhone")){
+		    return new MiPhone();
+		}
+		else if(phoneType.equalsIgnoreCase("iPhone")) {
+		    return new IPhone();
+		}
+		return null;
+	    }
+	}
+】
+
+2.工厂方法：用来生产同一等级结构中的固定产品，支持增加任意产品。（新增产品时，就新增对应的工厂类）
+【定义一个抽象工厂，其定义了产品的生产接口，但不负责具体的产品，将生产任务交给不同的派生类工厂。这样不用通过指定类型来创建对象了。
+举例：【 AppleFactory类：生产苹果手机的工厂（ConcreteFactory2）
+	public class AppleFactory implements AbstractFactory {
+	    @Override
+	    public Phone makePhone() {
+		return new IPhone();
+	    }
+	}
+
+3.抽象工厂：用来生产不同产品族的全部产品，对于增加新的产品，无能为力；支持增加产品族。
+
 
 89.简单工厂和抽象工厂有什么区别？
 
+简单工厂：用来生产同一等级结构中的任意产品，对于增加新的产品，无能为力。 （新建一工厂类，if-else判断的形式）
+工厂方法：用来生产同一等级结构中的固定产品，支持增加任意产品。
+抽象工厂：用来生产不同产品族的全部产品，对于增加新的产品，无能为力；支持增加产品族。
 
 
 十、Spring/Spring MVC
