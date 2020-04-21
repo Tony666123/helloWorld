@@ -1932,13 +1932,58 @@ spring MVC：提供了 Web 应用的 Model-View-Controller 全功能/的实现�
 
 95.spring 中的 bean 是线程安全的吗？
 
-【spring中的bean默认是单例模式的，     todo1    】
+【结论： 不是线程安全的 】
+（参考：https://www.cnblogs.com/myseries/p/11729800.html Spring 中的bean 是线程安全的吗？）
+
+spring 中的 bean 默认是单例模式，spring 框架并没有对单例 bean 进行多线程的封装处理。
+（@Scope(value = "prototype") // 加上@Scope注解，他有2个取值：单例-singleton 多实例-prototype(prototype:原型，每次创建一个新对象)）
+
+实际上大部分时候 spring bean 无状态的（比如 dao 类），所有某种程度上来说 bean 也是安全的，
+(也就是线程中的操作不会对Bean的成员执行查询以外的操作，那么这个单例Bean是线程安全的。)
+但如果 bean 有状态的话（比如 view model 对象），那就要开发者自己去保证线程安全了，
+最简单的就是改变 bean 的作用域，把“singleton”变更为“prototype”，这样请求 bean 相当于 new Bean()了，所以就可以保证线程安全了。
+
+·有状态就是有数据存储功能。
+·无状态就是不会保存数据。
+
+【参考：https://blog.csdn.net/qq_29645505/article/details/88432001 Spring中的Bean是线程安全的吗？
+ 注： Spring容器本身并没有提供线程安全的策略，因此是否线程安全完全取决于Bean本身的特性。
+ 使用ThreadLocal的好处
+ 使得多线程场景下，多个线程对这个单例Bean的成员变量并不存在资源的竞争，因为ThreadLocal为每个线程保存线程私有的数据。】
+
+【参考：https://www.cnblogs.com/goody9807/p/7472127.html Spring中Bean的五个作用域
+曾经面试的时候有面试官问我spring的controller是单例还是多例，结果
+我傻逼的回答当然是多例，要不然controller类中的 非静态变量 如何保证是线程安全的，这样想起似乎是对的，但是不知道（主要是我没看过
+spring的源码，不知道真正的内在意图）为什么spring的controller是单例的。
+  最佳实践：
+	1、不要在controller中定义成员变量。
+	2、万一必须要定义一个非静态成员变量时候，则通过注解@Scope("prototype")，将其设置为多例模式。】
 
 
 96.spring 支持几种 bean 的作用域？
 
+spring 支持 5 种作用域，如下：
+	1.singleton：spring ioc 容器中只存在一个 bean 实例，bean 以单例模式存在，是系统默认值；
+	2.prototype：每次从容器调用 bean 时都会创建一个新的示例，既每次 getBean()相当于执行 new Bean()操作；
+
+    Web 环境下的作用域：
+	3.request：每次 http 请求都会创建一个 bean； 【@Scope(value = "request")】
+	4.session：同一个 http session 共享一个 bean 实例；
+	5.global-session：用于 portlet 容器，因为每个 portlet 有单独的 session，globalsession 提供一个全局性的 http session。
+    注意： 使用 prototype 作用域需要慎重的思考，因为频繁创建和销毁 bean 会带来很大的性能开销。
+
+
 97.spring 自动装配 bean 有哪些方式？
 
+参照下面：103.@Autowired 的作用是什么？
+使用注解自动装配：
+    如果不想在xml文件中使用autowire属性来启用自动装配，还可以直接在类定义中使用@Autowired或@Resource来装配bean。
+
+【no：默认值，表示没有自动装配，应使用显式 bean 引用进行装配。
+byName：它根据 bean 的名称注入对象依赖项。
+byType：它根据类型注入对象依赖项。
+构造函数：通过构造函数来注入依赖项，需要设置大量的参数。
+autodetect：容器首先通过构造函数使用 autowire 装配，如果不能，则通过 byType 自动装配。】
 
 
 98.spring 事务实现方式有哪些？
@@ -2012,7 +2057,6 @@ T1	此时T1插入数据，会报主键冲突。
    返回ModelAndView(模型和视图) --> 查询对应视图解析器 --> 视图渲染返回给客户端 】
 
 
-
 102.@RequestMapping 的作用是什么？
   **将http请求 映射到 相应的类/方法上。
 
@@ -2081,7 +2125,71 @@ jpa，全称是Java Persistence API，hibernate是基于jpa的具体实现。
 
 
 111.spring cloud 断路器的作用是什么？
+【 一个微服务项目中，不外乎调用别人的接口 和 提供接口给别人调用；
+   在messcat(或一般)项目中，controller就是提供给别人调用的，那么feign下的接口则是调用别人的接口；
+   在feign下的接口中，用到了 @FeignClient + fallbackFactory,其用意就是feign调用别人的接口出现异常或失败时，进入fallbackFactory类返回指定的数据参数。
+】
 
+参考：https://blog.csdn.net/HD243608836/article/details/96010684 和 https://www.cnblogs.com/achengmu/p/9911808.html 
+spring cloud: Hystrix（六）：feign的注解@FeignClient：fallbackFactory（类似于断容器）与fallback方法
+
+SpringCloud + Feign + Hystrix使用FallbackFactory统一处理，查看服务调用异常或失败，进入熔断降级处理的原因
+
+  fallbackFactory（类似于断容器）与fallback方法：
+    feign的注解@FeignClient：fallbackFactory与fallback方法不能同时使用，这个两个方法其实都类似于Hystrix的功能，当网络不通时返回默认的配置数据.
+    fallback方法的使用：
+	1.在入口文件开启feign注解功能。  @EnableFeignClients
+	2.写一个访问spring-boot-user服务的接口，同时在@FeignClient注解中使用fallback默认返回方法（断容器）
+	fallback=HystrixClientFallback.class
+	
+	@FeignClient(name="spring-boot-user", fallback=HystrixClientFallback.class)
+	public interface UserFeignClient {
+	    // 两个坑：1. @GetMapping不支持   2. @PathVariable得设置value
+	    @RequestMapping(value="/simple/{id}", method=RequestMethod.GET)
+	    public User findById(@PathVariable("id") Long id);
+	}
+
+	3.1 方式1 - 写HystrixClientFallback类，并实现UserFeignClient类，当网络不通或者访问失败时，返回固定/默认内容
+	@Component
+	public class HystrixClientFallback  implements UserFeignClient{
+	    @Override
+	    public User findById(Long id) {
+		// TODO Auto-generated method stub
+		User user = new User();
+		user.setId(0L);
+		return user;
+	    }
+	}
+   
+    （fallbackFactory方法的使用）
+	3.2 方式2 - 写HystrixClientFallbackFactory类，和HystrixClientWithFallbackFactory类
+	HystrixClientWithFallbackFactory类继承UserFeignClient类（这步骤可以不写，然后在下面方法中直接换成 new UserFeignClient()）
+
+	public interface HystrixClientWithFallbackFactory extends UserFeignClient { }
+
+	HystrixClientFallbackFactory实现FallbackFactory类，并使用内部匿名方法类，继续UserFeignClient
+		@Component
+		public class HystrixClientFallbackFactory implements FallbackFactory<UserFeignClient> {
+		    @Override
+		    public UserFeignClient create(Throwable arg0) {
+			// TODO Auto-generated method stub
+			return new HystrixClientWithFallbackFactory() {   //这步可以换成直接new接口：new UserFeignClient()
+			    @Override
+			    public User findById(Long id) {
+				// TODO Auto-generated method stub
+				User user = new User();
+				user.setId(-1L);
+				return user;
+			    } 
+			};
+		    }
+		}
+
+ 】
+
+当一个服务调用另一个服务由于网络原因或者自身原因 出现问题时,调用者就会等待被调用者的响应(调用方就会一直等待),当更多的服务请求到这些资源时,导致更多的请求等待,这样就会发生连锁效应（雪崩效应）,断路器就是解决这一问题。
+ 
+在分布式架构中，断路器模式 的作用也是类似的，当某个服务单元发生故障（类似用电器发生短路）之后，通过断路器的故障监控（类似熔断保险丝），向调用方返回一个错误响应，而不是长时间的等待。这样就不会使得线程因调用故障服务被长时间占用不释放，避免了故障在分布式系统中的蔓延。
 
 
 112.spring cloud 的核心组件有哪些？
@@ -2092,15 +2200,19 @@ jpa，全称是Java Persistence API，hibernate是基于jpa的具体实现。
 十二、Hibernate
 
 113.为什么要使用 hibernate？
+·hibernate对JDBC进行了封装，大大简化了数据访问层的繁琐和重复性代码。
+·hibernate是一个主流的持久化框架，是一个优秀的ORM（对象关系映射(Object Relational Mapping)）实现，它很大程度的简化了dao层编码工作。
+
 
 114.什么是 ORM 框架？
 
+ORM（Object Relation Mapping）对象关系映射，是把数据库中的关系数据映射成为程序中的对象。
+使用 ORM 的优点：提高了开发效率降低了开发成本、开发更简单更对象化、可移植更强。
 
 
 115.hibernate 中如何在控制台查看打印的 sql 语句？
  在 conf 配置文件中 把  hibernate.show_SQL 设置为 true 即可。
  但不建议开启，开启会降低程序运行效率。
-
 
 
 116.hibernate 有几种查询方式？
@@ -2110,7 +2222,7 @@ jpa，全称是Java Persistence API，hibernate是基于jpa的具体实现。
 
 
 117.hibernate 实体类可以被定义为 final 吗？
-
+【可以，但不建议】
 
 
 118.在 hibernate 中使用 Integer 和 int 做映射有什么区别？【和 Integer 和 int 的区别一个意思】
@@ -2126,17 +2238,16 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 （反映了持久化类和数据库表的映射信息，Hibernate的配置文件主要用来 配置数据库连接 以及 Hibernate运行时所需要的各个属性的值）。
  2. hbm --- Hibernate加载映射。
 
-
 1.读取cfg配置文件 -->
 2.读取映射文件，创建sessionFactory -->   3.打开session(会话) -->    
 4.创建事务 -->  5.进行持久化操作(执行业务代码) -->  6.提交事务 -->
 7.关闭session -->   8.关闭sessionFactory
 
 
-
 120.get()和 load()的区别？
-  【 get() 立即查询加载；load() 延迟查询加载 todo 2】
-
+  【 get() 立即查询加载；load() 延迟查询加载 todo 2】
+1.数据查询时，没有 OID 指定的对象，get() 返回 null；load() 返回一个代理对象。
+2.load()支持延迟加载；get() 不支持延迟加载。
 
 
 121.说一下 hibernate 的缓存机制？
@@ -2145,12 +2256,28 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 
 122.hibernate 对象有哪些状态？
  【 游离态 、持久态。   瞬时态 --  持久态 -- 游离态】
-
+临时/瞬时状态：直接 new 出来的对象，该对象还没被持久化（没保存在数据库中），不受 Session 管理。
+持久化状态：   当调用 Session 的 save/saveOrupdate/get/load/list 等方法的时候，对象就是持久化状态。
+游离状态：     Session 关闭之后对象就是游离状态。
 
 
 123.在 hibernate 中 getCurrentSession 和 openSession 的区别是什么？
 
+getCurrentSession 会绑定当前线程，而 openSession 则不会。
+getCurrentSession 事务是 Spring 控制的，并且不需要手动关闭，而 openSession 需要我们自己手动开启和提交事务。
+
+
 124.hibernate 实体类必须要有无参构造函数吗？为什么？
+   【必须】
+
+    原因： Hibernate框架会调用这个默认构造方法来构造实例对象，即Class类的newInstance方法 ，这个方法就是通过调用默认构造方法来创建实例对象的 。
+
+    当查询的时候返回的实体类是一个对象实例，是Hibernate动态通过反射生成的。反射的Class.forName(“className”).newInstance()需要对应的类提供一个无参构造方法，必须有个无参的构造方法将对象创建出来，单从Hibernate的角度讲 他是通过反射创建实体对象的 所以没有默认构造方法是不行的，另外Hibernate也可以通过有参的构造方法创建对象。
+    
+    提醒一点
+如果你没有提供任何构造方法，虚拟机会自动提供默认构造方法（无参构造器），但是如果你提供了其他有参数的构造方法的话，虚拟机就不再为你提供默认构造方法，这时必须手动把无参构造器写在代码里，否则new Xxxx()是会报错的，所以默认的构造方法不是必须的，只在有多个构造方法时才是必须的，这里“必须”指的是“必须手动写出来”。
+
+hibernate 中每个实体类必须提供一个无参构造函数，因为 hibernate 框架要使用 reflection api（反射），通过调用 Class类的newInstance() 来创建实体类的实例，如果没有无参的构造函数就会抛出异常。
 
 
 
@@ -2164,22 +2291,29 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 \#{}是预编译处理，${}是字符替换。 在使用 #{}时，MyBatis 会将 SQL 中的 #{}替换成“?”，配合 PreparedStatement 的 set 方法赋值，这样可以有效的防止 SQL 注入，保证程序的运行安全。
 
 
-
 126.mybatis 有几种分页方式？
+
 
 127.RowBounds 是一次性查询全部结果吗？为什么？
 
+
 128.mybatis 逻辑分页和物理分页的区别是什么？
+
 
 129.mybatis 是否支持延迟加载？延迟加载的原理是什么？
 
+
 130.说一下 mybatis 的一级缓存和二级缓存？
+
 
 131.mybatis 和 hibernate 的区别有哪些？
 
+
 132.mybatis 有哪些执行器（Executor）？
 
+
 133.mybatis 分页插件的实现原理是什么？
+
 
 134.mybatis 如何编写一个自定义插件？
 
@@ -2533,6 +2667,7 @@ ing
 
 178.如何做 mysql 的性能优化？
 为索引字段创建索引；避免使用 select *，列出需要查询的字段；垂直分割分表（分库分表）；选择正确的存储引擎。
+
 
 
 
