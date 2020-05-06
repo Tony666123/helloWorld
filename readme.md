@@ -2245,23 +2245,114 @@ Integer 类型 为对象，它的值可以为null； 而 Int 属于基础数据�
 
 
 120.get()和 load()的区别？
-  【 get() 立即查询加载；load() 延迟查询加载 todo 2】
+ 
+ 参考：https://www.cnblogs.com/cc11001100/p/6883790.html Hibernate中get()和load()的区别（good）
+ **【 Hibernate中 根据Id单条查询 获取对象的方式有两种，分别是get()和load()，来看一下这两种方式的区别
+      1.get() 立即查询加载；
+      	当get()方法被调用的时候就会立即发出SQL语句：
+		Hibernate:
+		    select
+			user0_.ID as ID1_1_0_,
+			user0_.CREATETIME as CREATETI2_1_0_,
+			user0_.UPDATETIME as UPDATETI3_1_0_,
+			user0_.USERNAME as USERNAME4_1_0_,
+			user0_.PASSWD as PASSWD5_1_0_
+		    from
+			USER user0_
+		    where
+			user0_.ID=?
+	并且返回的对象也是实际的对象：
+	使用get()和普通的单条查询并没有多大的区别。
+      2.load() 延迟查询加载:
+      	当调用load()方法的时候会 返回一个目标对象的代理对象，在这个代理对象中只存储了目标对象的ID值，
+	只有当调用 除ID值以外 的属性值 的时候 才会 发出SQL查询的。
+	
+	比如：当我们尝试下面的代码时：
+		User user=session.load(User.class, "1");
+		System.out.println(user.getId()); //只访问ID属性
+	因为我们只访问了ID属性，这个在代理对象中是已经存在的了，所以并不需要再去数据库中查询，因此并不会发出SQL查询语句。
+	
+	当使用到除ID以外的属性的时候，会发出SQL查询语句，比如尝试执行下面的代码：
+		User user=session.load(User.class, "1");
+		System.out.println(user.getUsername());
+	会发现控制台打印了SQL查询语句：
+		Hibernate:
+		    select
+			user0_.ID as ID1_1_0_,
+			user0_.CREATETIME as CREATETI2_1_0_,
+			user0_.UPDATETIME as UPDATETI3_1_0_,
+			user0_.USERNAME as USERNAME4_1_0_,
+			user0_.PASSWD as PASSWD5_1_0_
+		    from
+			USER user0_
+		    where
+			user0_.ID=?
+	这个时候再看代理对象的话，会发现target已经被填充上了：	
+
+	3. Exception
+	   数据查询时，没有 OID 指定的对象，
+	   get() 返回 null，继续获取属性会报空指针异常；
+	   load() 返回一个代理对象。继续获取属性时ObjectNotFoundException异常：。
+	即，查询结果为空(又继续获取属性)时：
+		get()抛出NullPointerException
+		load()抛出ObjectNotFoundException
+
+	4. 缓存：
+		get()和load()都会使用缓存，都是首先从一级缓存Session中查找，当找不到的时候再去二级缓存中查找，
+		当查询不到的时候get()返回的是null，而load()则返回代理对象。
+  】
+  
 1.数据查询时，没有 OID 指定的对象，get() 返回 null；load() 返回一个代理对象。
 2.load()支持延迟加载；get() 不支持延迟加载。
 
 
 121.说一下 hibernate 的缓存机制？
+【一级缓存和二级缓存；一级缓存自动开启，二级缓存需要手动开启】
+参考：https://www.cnblogs.com/lone5wolf/p/11065155.html Hibernate的缓存机制
+一级缓存：
+　　1、使用一级缓存的目的是 为了减少对数据库的访问次数，从而提升hibernate的执行效率；
+  （当执行一次查询操作的时候，执行第二次查询操作，先检查缓存中是否有数据，如果有数据就不查询数据库，直接从缓存中获取数据）；
+　　2、Hibernate中的一级缓存，也叫做session的缓存，它可以在session范围内减少数据库的访问次数，只在session范围内有效，session关闭，一级缓存失败；
+　　3、一级缓存的特点，只在session范围有效，作用时间短，效果不是特别明显，在短时间内多次操作数据库，效果比较明显。
+　　4、当调用session的save/saveOrUpdate/get/load/list/iterator方法的时候，都会把对象放入session缓存中；
+　　5、session的缓存是由hibernate维护的，用户不能操作缓存内容；如果想操作缓存内容，必须通过hibernate提供的evict/clear方法操作
+　　6、缓存相关的方法（在什么情况下使用上面方法呢？批量操作情况下使用，如Session.flush();先与数据库同步，Session.clear(); 再清空一级缓存内容）：
+　　　　session.flush();让一级缓存与数据库同步；
+　　　　session.evict();清空一级缓存中指定的对象；
+　　　　session.clear();清空一级缓存中所有的对象；
+    
+【hibernate和mybatis的一级缓存第一次查询后会缓存，若查询后执行了insert、delete、update就会抹除一级缓存，此时再查询相同的条件仍会查询数据库。
+ 参考 https://blog.csdn.net/weixin_41847891/article/details/100623375 缓存篇】
 
+hibernate 常用的缓存有一级缓存和二级缓存：
+
+一级缓存：也叫 Session 缓存，只在 Session 作用范围内有效，不需要用户干涉，由 hibernate 自身维护，可以通过：evict(object)清除 object 的缓存；clear()清除一级缓存中的所有缓存；flush()刷出缓存；
+
+二级缓存：应用级别的缓存，在所有 Session 中都有效，支持配置第三方的缓存，如：EhCache。
 
 
 122.hibernate 对象有哪些状态？
  【 游离态 、持久态。   瞬时态 --  持久态 -- 游离态】
 临时/瞬时状态：直接 new 出来的对象，该对象还没被持久化（没保存在数据库中），不受 Session 管理。
 持久化状态：   当调用 Session 的 save/saveOrupdate/get/load/list 等方法的时候，对象就是持久化状态。
-游离状态：     Session 关闭之后对象就是游离状态。
+游离状态：     Session 关闭之后对象就是游离状态（ 代码执行session.getTransaction().commit();后）。
 
 
 123.在 hibernate 中 getCurrentSession 和 openSession 的区别是什么？
+
+参考：https://blog.csdn.net/chuck_kui/article/details/54845235 Hibernate 中的 openSession和getCurrentSession 方法的区别
+在进行配置信息管理时，我们一般进行一下简单步骤：
+Configuration cfg = new Configuration(); // 获得配置信息对象
+SessionFactory sf = cfg.configure().buildSessionFactory(); //解析并建立Session工厂
+
+1. Session session = sf.getCurrentSession(); // 获得Session
+2. Session session = sf.openSession(); // 打开Session
+
+对于上述的两个方法，有以下区别：
+  1. openSession 从字面上可以看得出来，是打开一个新的session对象，而且每次使用都是打开一个新的session，假如连续使用多次，则获得的session不是同一个对象，并且使用完需要调用close方法关闭session。
+  2. getCurrentSession ，从字面上可以看得出来，是获取当前上下文一个session对象，当第一次使用此方法时，会自动产生一个session对象，并且连续使用多次时，得到的session都是同一个对象，这就是与openSession的区别之一，简单而言，getCurrentSession 就是：如果有已经使用的，用旧的，如果没有，建新的。
+
+**注意：在实际开发中，往往使用getCurrentSession多，因为一般是处理同一个事务（即是使用一个数据库的情况），所以在一般情况下比较少使用openSession或者说openSession是比较老旧的一套接口了；
 
 getCurrentSession 会绑定当前线程，而 openSession 则不会。
 getCurrentSession 事务是 Spring 控制的，并且不需要手动关闭，而 openSession 需要我们自己手动开启和提交事务。
@@ -2282,31 +2373,149 @@ hibernate 中每个实体类必须提供一个无参构造函数，因为 hibern
 
 
 十三、Mybatis
+(**参考 :https://blog.csdn.net/weixin_41847891/article/details/100623375 
+第十三模块 mybatis 中 #{}和 ${}的区别、mybatis 有几种分页方式、mybatis 逻辑分页和物理分页的区别、mybatis 是否支持延迟加载、延迟加载的原理、一级缓存和二级缓存)
 
 125.mybatis 中 #{}和 ${}的区别是什么？
 
 【 #{}，将传入的参数都作为字符串处理，自动加上双引号，经过预编译处理，安全行强，可以避免sql注入；
    ${}，将参数直接嵌入持久层的sql，未经过预编译处理，存在sql注入的隐患】
 
-\#{}是预编译处理，${}是字符替换。 在使用 #{}时，MyBatis 会将 SQL 中的 #{}替换成“?”，配合 PreparedStatement 的 set 方法赋值，这样可以有效的防止 SQL 注入，保证程序的运行安全。
+\#{}是预编译处理，${}是字符替换。 
+在使用 #{}时，MyBatis 会将 SQL 中的 #{}替换成“?”，配合 PreparedStatement 的 set 方法赋值，这样可以有效的防止 SQL 注入，保证程序的运行安全。
+
+
+(**参考 :https://blog.csdn.net/weixin_41847891/article/details/100623375 
+第十三模块 mybatis 中 #{}和 ${}的区别、mybatis 有几种分页方式、mybatis 逻辑分页和物理分页的区别、mybatis 是否支持延迟加载、延迟加载的原理、一级缓存和二级缓存)
+
+#{}是预编译处理，${}是字符串替换；
+Mybatis在处理#{}时，会将sql中的#{}替换为?号，调用PreparedStatement的set方法来赋值；
+Mybatis在处理${}时，就是把sql中的${}替换成变量的值；
+使用#{}可以有效的防止SQL注入，提高系统安全性。
 
 
 126.mybatis 有几种分页方式？
+1.物理分页
+    物理分页就是数据库本身提供了分页方式，如MySQL的limit，oracle的rownum ，好处是效率高，不好的地方就是不同数据库有不同的搞法。
+
+2.逻辑分页
+    逻辑分页利用游标分页，好处是所有数据库都统一，坏处就是效率低。
+
+    两种分页方式，分别是逻辑分页和物理分页；
+    	物理分页 是从数据库查询指定条数的数据，弥补了一次性全部查出的所有数据的种种缺点，比如需要大量的内存，对数据库查询压力较大等问题。
+	逻辑分页 是一次性查询很多数据，然后再在结果中检索分页的数据。这样做弊端是需要消耗大量的内存、有内存溢出的风险、对数据库压力较大。
+
+**参考：https://www.jianshu.com/p/2d6e8ff4d85a mybatis（1）—逻辑分页和物理分页
+区别：见连接图。（推荐使用物理查询，减少内存占用）
+1. Mybatis实现分页的方法
+使用RowBounds对象进行逻辑（逻辑内存中）分页，它是针对ResultSet结果集执行的内存分页。
+使用pageHelper插件进行物理分页（其实是依赖物理数据库实体）。
+
+2. Mybatis使用pageHelper实现分页的原理
+强烈推荐阅读——浅析pagehelper分页原理(https://blog.csdn.net/qq_21996541/article/details/79796117)
+
+本质上两个知识点：
+  1.将pageNum和pageSize封装为page对象，保存在ThreadLocal中，实现线程间数据隔离。
+  2.Pagehelper实现了Mybatis的Interceptor接口，调用拦截StatementHandler（Sql语法的构建处理）方法，按照物理库的不同重构SQL实现分页。
+
+插件拦截的对象：
+	1.Executor：拦截执行器的方法（log记录）
+	2.StatementHandler：sql语法构建处理
+	3.ParameterHandler：拦截参数的处理
+	4.ResultSetHandler：拦截结果集的处理
 
 
 127.RowBounds 是一次性查询全部结果吗？为什么？
+【PageHelper是物理查询 -  通过拦截器加数据库limit等进行分页查询；
+  RowBounds是逻辑查询 - 数据量大的时候压力较大】
+
+参考：https://blog.csdn.net/wangzhetianxia8/article/details/88783431 mybatis 分页 RowBounds和PageHelper性能评测
+原理分析
+ PageHelper：物理分页， 通过拦截器加 limit 语句进行分页
+ RowBounds： 逻辑分页，数据量大的时候压力较大
+总结：  1.使用RowBounds最大好处就是节省了在xml再拼装limit
+       2.Mybatis的逻辑分页比较简单，简单来说就是取出所有满足条件的数据，然后舍弃掉前面offset条数据，然后再取剩下的数据的limit条
+
+【**但是，RowBounds 表面是在“所有”数据中检索数据，其实并非是一次性查询出所有数据，
+  因为 MyBatis 是对 jdbc 的封装，在 jdbc 驱动中有一个 Fetch Size 的配置，它规定了每次最多从数据库查询多少条数据，
+  假如你要查询更多数据，它会在你执行 next()的时候，去查询更多的数据。
+  就好比你去自动取款机取 10000 元，但取款机每次最多能取 2500 元，所以你要取 4 次才能把钱取完。
+  只是对于 jdbc 来说，当你调用 next()的时候会自动帮你完成查询工作。这样做的好处可以有效的防止内存溢出。】
 
 
-128.mybatis 逻辑分页和物理分页的区别是什么？
+128.mybatis 逻辑分页和物理分页的区别是什么？（RowBounds和PageHelper）
+	1.物理分页
+		物理分页就是数据库本身提供了分页方式，如MySQL的limit，oracle的rownum ，好处是效率高，不好的地方就是不同数据库有不同的搞法。
+	2.逻辑分页
+		逻辑分页利用游标分页，好处是所有数据库都统一，坏处就是效率低。
 
+	  两种分页方式，分别是逻辑分页和物理分页；
+		物理分页 是从数据库查询指定条数的数据，弥补了一次性全部查出的所有数据的种种缺点，比如需要大量的内存，对数据库查询压力较大等问题。
+		逻辑分页 是一次性查询很多数据，然后再在结果中检索分页的数据。这样做弊端是需要消耗大量的内存、有内存溢出的风险、对数据库压力较大。
+	
 
 129.mybatis 是否支持延迟加载？延迟加载的原理是什么？
+	mybatis支持延迟加载; 设置 lazyLoadingEnabled=true 即可。
+	适用场景
+	一对一，多对一   立即加载
+	一对多，多对多   延迟加载
+
+	延迟加载的原理 是调用的时候触发加载，而不是在初始化的时候就加载信息。
+	比如调用 a. getB(). getName()，这个时候发现 a. getB() 的值为 null，此时会单独触发事先保存好的关联 B 对象的 SQL，先查询出来 B，
+	然后再调用 a. setB(b)，而这时候再调用 a. getB(). getName() 就有值了，这就是延迟加载的基本原理。
+	
+	**当然了，不光是Mybatis，几乎所有的包括 Hibernate，支持延迟加载的原理都是一样的。
 
 
 130.说一下 mybatis 的一级缓存和二级缓存？
+一级缓存：
+  缓存目的 是为了减少对数据库的访问次数，提升数据库的执行效率。
+  mybatis缓存机制包括：1.一级缓存 2.二级缓存
+  
+  【hibernate和mybatis的一级缓存第一次查询后会缓存，若查询后执行了insert、delete、update就会抹除一级缓存，此时再查询相同的条件仍会查询数据库。
+ 参考 https://blog.csdn.net/weixin_41847891/article/details/100623375 缓存篇】
+
+ 【为什么本地项目调用两次接口查询两次数据库，而没有使用一级缓存？
+  参考：https://blog.csdn.net/ex_tang/article/details/83155031 mybatis中一级缓存
+  
+  **注意：调controller接口不论是否一级缓存都需要查数据库的，以上以下说的是再同一个service方法里面写了两个同样查询的代码，这样+@Transactional后有使用一级缓存，不会查两遍。（涉及两个session的话应该使用二级缓存。待验证）
+  
+   2、spring中结合 mybatis中，默认情况下，数据库处于自动提交模式，每一条sql语句处于一个单独的事务中，语句执行完毕时，如果执行成功则隐式提交事务。
+   而mybatis的一级缓存在这种情况下是无效的，想要一级缓存起作用，则要开启事务：
+   
+   下面Service层中的代码同样对同一个数据查询了两次，这次开启了事务管理
+	@Autowired
+	private LsjmUserMapper lsjmUserMapper;
+
+	@Override
+	@Transactional   // 开启事务控制，当前，spring配置文件中得先配置好
+	public LsjmUser getUser() {
+		// 第一次查询
+		LsjmUser user = lsjmUserMapper.getUserByName("300");
+		System.out.println(user.toString());
+
+		// 第二次查询
+		LsjmUser user1 = lsjmUserMapper.getUserByName("300");
+		System.out.println(user1.toString());
+		return user;
+	}
+	
+	前台页面触发Service后：控制台打印日志：
+	可以看出来第一次查询时，构造了一个SqlSession对象，从数据库查询数据，然后将查询的结果存储到一级缓存SqlSession中，
+	第二次查询时，直接Fetched SqlSession，而不是再重新建一个，此时就是从缓存中直接取数据了.
+  】
+  
+二级缓存： 
+  是mapper级别的缓存，也就是多个sqlSession之间可以实现数据的共享。
+  二级缓存默认是不开启，所以在使用二级缓存时需要在做以下配置：ing
+
 
 
 131.mybatis 和 hibernate 的区别有哪些？
+	灵活性：    MyBatis 更加灵活，自己可以写 SQL 语句，使用起来比较方便。
+	可移植性：  MyBatis可移植性差。MyBatis 有很多自己写的 SQL，因为每个数据库的 SQL 可以不相同，所以可移植性比较差。
+	学习和使用门槛：MyBatis 入门比较简单，使用门槛也更低。
+	二级缓存：  MyBatis二级缓存不是很友好。hibernate 拥有更好的二级缓存，它的二级缓存可以自行更换为第三方的二级缓存。
 
 
 132.mybatis 有哪些执行器（Executor）？
@@ -2363,24 +2572,25 @@ hibernate 中每个实体类必须提供一个无参构造函数，因为 hibern
 
 不可以，因为kafka需要依赖于zookeeper来管理和协调kafka的节点服务器。【所以kafka有内置的zookeeper的】
 
-Zookeeper作用：管理broker、consumer。创建Broker后，向zookeeper注册新的broker信息，实现在服务器正常运行下的水平拓展。Topic的注册，zookeeper会维护topic与broker的关系，通/brokers/topics/topic.name节点来记录。
-
+**Zookeeper作用：管理broker、consumer。创建Broker后，向zookeeper注册新的broker信息，实现在服务器正常运行下的水平拓展。Topic的注册，zookeeper会维护topic与broker的关系，通/brokers/topics/topic.name节点来记录。
 
 
 153.kafka 有几种数据保留的策略？
-
+*kafka 有两种数据保存策略：按照过期时间保留和按照存储的消息大小保留。
 
 
 154.kafka 同时设置了 7 天和 10G 清除数据，到第五天的时候消息达到了 10G，这个时候 kafka 将如何处理？
-
 *这个时候 kafka 会执行数据清除工作，时间和大小不论那个满足条件，都会清空数据。
 
 
-
 155.什么情况会导致 kafka 运行变慢？
+·cpu 性能瓶颈
+·磁盘读写瓶颈
+·网络瓶颈
 
 156.使用 kafka 集群需要注意什么？
-
+·集群的数量不是越多越好，最好不要超过 7 个，因为节点越多，消息复制需要的时间就越长，整个群组的吞吐量就越低。
+·集群数量最好是单数，因为超过一半故障集群就不能用了，设置为单数容错率更高。
 
 
 十六、Zookeeper
