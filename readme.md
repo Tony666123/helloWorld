@@ -1560,8 +1560,55 @@ Spring AOP中JDK和CGLib动态代理商哪个更快？ https://www.songma.com/ne
 六、Java Web
 
 64.jsp 和 servlet 有什么区别？
+【jsp本质也是servlet】
+参考：https://blog.csdn.net/anwarkanji/article/details/90526155 jsp和servlet区别
+1.Servlet：
+	Servlet 是一种服务器端的Java应用程序，具有独立于平台和协议的特性，可以生成动态的Web页面。它担当客户请求（Web浏览器或其他HTTP客户程序）与服务器响应（HTTP服务器上的数据库或应用程序）的中间层。 Servlet是位于Web服务器内部的服务器端的Java应用程序，与传统的从命令行启动的Java应用程序不同，Servlet由Web服务器进行加载，该Web服务器必须包含支持Servlet的Java虚拟机。
+
+2.JSP：
+	JSP 全名为 Java Server Pages，中文名叫java服务器页面，其根本是一个简化的Servlet设计。 
+	JSP(JavaServer Pages)是一种动态页面技术，它的主要目的是将表示逻辑从Servlet中分离出来。
+
+3.相同点：
+	jsp经编译后就变成了servlet，jsp本质就是servlet，jvm只能识别java的类，不能识别jsp代码，web容器将jsp的代码编译成jvm能够识别的java类。
+
+4.不同点：
+	JSP侧重视图，Sevlet主要用于控制逻辑。
+
+	Servlet中没有内置对象 。
+	JSP中的内置对象都是必须通过HttpServletRequest对象，HttpServletResponse对象以及HttpServlet对象得到。
+
+**JS和JSP相比较：虽然JS可以在客户端动态生成HTML，但是很难与服务器交互，因此不能提供复杂的服务。如：访问数据库和图像处理等等。
+JSP在HTML中用<% %>里面实现。JS在HTML中用<Scrippt></Script>实现。
+
+JSP 是 servlet 技术的扩展，本质上就是 servlet 的简易方式。
+servlet 和 JSP 最主要的不同点在于，servlet 的应用逻辑是在 Java 文件中，并且完全从表示层中的 html 里分离开来，
+而 JSP 的情况是 Java 和 html 可以组合成一个扩展名为 JSP 的文件。
+JSP 侧重于视图，servlet 主要用于控制逻辑。
+
 
 65.jsp 有哪些内置对象？作用分别是什么？
+	request：用户端请求，此请求会包含来自来自GET/POST请求的参数
+	response：网页传回用户端的回应
+	pageContext：网页的属性是在这里管理的
+	session：与请求有关的
+	application：servlet正在执行的内容
+	out：用来传送回应的输出
+	page：JSP网页本身
+	config：servlet的架构部件
+	exception：针对错误网页，未捕捉的例外
+
+JSP 有 9 大内置对象：
+	request：封装客户端的请求，其中包含来自 get 或 post 请求的参数；
+	response：封装服务器对客户端的响应；
+	pageContext：通过该对象可以获取其他对象；
+	session：封装用户会话的对象；
+	application：封装服务器运行环境的对象；
+	out：输出服务器响应的输出流对象；
+	config：Web 应用的配置对象；
+	page：JSP 页面本身（相当于 Java 程序中的 this）；
+	exception：封装页面抛出异常的对象。
+
 
 66.说一下 jsp 的 4 种作用域？
 
@@ -1791,8 +1838,75 @@ GET参数通过URL传递，POST放在Request body中。
 
 86.如何实现跨域？
 
+所谓同源是指，域名，协议，端口均相同，不明白没关系，举个栗子：
+http://www.123.com/index.html 调用 http://www.123.com/server.php （非跨域）
+http://www.123.com/index.html 调用 http://www.456.com/server.php （主域名不同:123/456，跨域）
+http://abc.123.com/index.html 调用 http://def.123.com/server.php （子域名不同:abc/def，跨域）
+http://www.123.com:8080/index.html 调用 http://www.123.com:8081/server.php （端口不同:8080/8081，跨域）
+
+
+【JSONP是JSON with Padding的略称。
+ 它是一个非官方的协议，它允许在服务器端集成Script tags返回至客户端，通过javascript callback的形式实现跨域访问（这仅仅是JSONP简单的实现形式）】
+   参考：https://www.cnblogs.com/itmacy/p/6958181.html 跨域问题：解决跨域的三种方案
+	当前端页面与后台运行在不同的服务器时，就必定会出现跨域这一问题，本篇简单介绍解决跨域的三种方案，部分代码截图如下，仅供参考：
+	方式一：使用ajax的jsonp
+	前端代码 & 服务器代码
+	 使用该方式的缺点：请求方式只能是get请求
+
+	方式二：使用jQuery的jsonp插件
+	插件下载网址：https://github.com/jaubourg/jquery-jsonp
+	前端代码 & 服务器代码
+	 使用该方式的特点：与方式一相比，请求方式不只局限于get请求，还可以是post请求，但从服务器从获取的数据依然是jsonp格式
+
+	方式三：使用cors
+	前端代码 & 服务器代码
+	**使用该方式的特点：与前两种方式相比，前端代码和未处理跨域前一样，即普通的ajax请求，但服务器代码添加了一段解决跨域的代码
+
+	    // 设置：Access-Control-Allow-Origin头，处理Session问题
+		response.setHeader("Access-Control-Allow-Origin", request.getHeader("Origin"));
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		response.setHeader("P3P", "CP=CAO PSA OUR");
+		if (request.getHeader("Access-Control-Request-Method") != null && "OPTIONS".equals(request.getMethod())) {
+		    response.addHeader("Access-Control-Allow-Methods", "POST,GET,TRACE,OPTIONS");
+		    response.addHeader("Access-Control-Allow-Headers", "Content-Type,Origin,Accept");
+		    response.addHeader("Access-Control-Max-Age", "120");
+		}
+
+	cors高级使用：在springmvc中配置拦截器
+	创建跨域拦截器实现HandlerInterceptor接口，并实现其方法，在请求处理前设置头信息，并放行
+	（在springmvc的配置文件中配置拦截器，注意拦截的是所有的文件）
+
 
 87.说一下 JSONP 实现原理？
+
+**jsonp：JSON with Padding，它是利用script标签的 src 连接可以访问不同源的特性，加载远程返回的“JS 函数”来执行的。
+
+参考：https://www.cnblogs.com/soyxiaobi/p/9616011.html 彻底弄懂jsonp原理及实现方法
+【JSONP是JSON with Padding的略称。
+  它是一个非官方的协议，它允许在服务器端集成Script tags返回至客户端，通过javascript callback的形式实现跨域访问（这仅仅是JSONP简单的实现形式）】
+
+　<script>标签的src属性并不被同源策略所约束，所以可以获取任何服务器上脚本并执行。
+  四、JSONP的实现模式--CallBack
+	刚才的小例子讲解了跨域的原理，我们回上去再看看JSONP的定义说明中讲到了javascript callback的形式。那我们就来修改下代码，如何实现JSONP的javascript callback的形式。
+
+程序A-20001中sample的部分代码：
+	<script type="text/javascript">
+		//回调函数
+		function callback(data) {
+		    alert(data.message);
+		}
+	</script>
+	<script type="text/javascript" src="http://localhost:20002/test.js"></script>
+
+程序B-20002中test.js的代码：
+	//调用callback函数，并以json数据形式作为阐述传递，完成回调
+	callback({message:"success"});
+
+这其实就是JSONP的简单实现模式，或者说是JSONP的原型：创建一个回调函数，然后在远程服务上调用这个函数并且将JSON 数据形式作为参数传递，完成回调。
+
+将JSON数据填充进回调函数，这就是JSONP的JSON+Padding的含义吧。
+
+一般情况下，我们希望这个script标签能够动态的调用，而不是像上面因为固定在html里面所以没等页面显示就执行了，很不灵活。我们可以通过javascript动态的创建script标签，这样我们就可以灵活调用远程服务了。
 
 
 
